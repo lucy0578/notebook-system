@@ -48,7 +48,7 @@
         if (window.localStorage.getItem("user") != null) {
           this.userFlag.name = JSON.parse(window.localStorage.getItem("user")).username
           this.userFlag.menuList = [
-            {url: '/home', name: '用户中心'},
+            {url: '/user-center', name: '用户中心'},
             {url: '/home', name: '笔记管理'},
           ]
           this.isLogin = 'inline-block'

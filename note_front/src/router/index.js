@@ -8,6 +8,7 @@ import Index from "../components/Index";
 import Bookshelf from "../components/bookshelf/Bookshelf";
 import NoteEdit from "../components/note/NoteEdit";
 import NoteDetail from "../components/note/NoteDetail";
+import UserCenter from "../components/user/UserCenter";
 
 Vue.use(Router)
 
@@ -58,6 +59,14 @@ export default new Router({
             requireAuth:true
           }
         },
+        {
+          path: '/user-center',
+          name: 'UserCenter',
+          component: UserCenter,
+          meta: {
+            requiresAuth: true
+          }
+        }
       ]
     },
   ]

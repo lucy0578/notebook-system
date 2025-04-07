@@ -7,6 +7,9 @@
             <el-input placeholder="请输入用户名" v-model="registerForm.username"></el-input>
           </el-form-item>
           <el-form-item>
+            <el-input placeholder="请输入邮箱" v-model="registerForm.email"></el-input>
+          </el-form-item>
+          <el-form-item>
             <el-input placeholder="请输入密码" v-model="registerForm.password" show-password></el-input>
           </el-form-item>
           <el-form-item>
@@ -29,6 +32,7 @@
       data() {
         return {
           registerForm:{
+            email: '',
             username:'',
             password:'',
             passwordConfirm:'',
@@ -48,6 +52,7 @@
 
           this.axios.post("/register",{
             username:this.registerForm.username,
+            email: this.registerForm.email,
             password:this.registerForm.password
           })
           .then(function (response) {
@@ -72,20 +77,20 @@
     width: 100%;
     /*background-image: url("../../static/bg.png");*/
     background-image: url("../../static/homeMask.png");
-    background-size: cover;
+    backgr.form-body{
+      border-radius: 10px;
+      margin: 100px auto auto;
+      width: 25%;
+      min-width: 200px;
+      padding: 30px 30px 15px 30px;
+      background-color: rgba(255,255,255,0.8);
+      box-shadow: 5px 3px 10px rgba(0,0,0,0.9);
+    }ound-size: cover;
     position: fixed;
     left: 0px;
     top:0px;
   }
-  .form-body{
-    border-radius: 10px;
-    margin: 100px auto auto;
-    width: 25%;
-    min-width: 200px;
-    padding: 30px 30px 15px 30px;
-    background-color: rgba(255,255,255,0.8);
-    box-shadow: 5px 3px 10px rgba(0,0,0,0.9);
-  }
+
   .form-confirm{
     width: 100%;
     background-color: #585858;
