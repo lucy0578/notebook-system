@@ -52,7 +52,7 @@
 
           this.axios.post("/register",{
             username:this.registerForm.username,
-            email: this.registerForm.email,
+            email:this.registerForm.email,
             password:this.registerForm.password
           })
           .then(function (response) {

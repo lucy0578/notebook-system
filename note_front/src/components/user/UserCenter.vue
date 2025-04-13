@@ -8,7 +8,7 @@
         <!-- 头像上传 -->
         <el-upload
           class="avatar-uploader"
-          action="https://jsonplaceholder.typicode.com/posts/"
+          action=/common/upload
           :show-file-list="false"
           :on-success="handleAvatarSuccess"
           :before-upload="beforeAvatarUpload">
@@ -139,7 +139,7 @@ export default {
   padding: 20px;
   width: 35%;
   min-width: 350px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 5px 3px 10px rgba(0,0,0,0.9);
 }
 .avatar-uploader .el-upload {
   border: 1px dashed #d9d9d9;
