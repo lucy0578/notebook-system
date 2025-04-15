@@ -39,9 +39,9 @@
             password:this.loginForm.password,
           })
           .then(function (response) {
-            console.log(response.data.status)
-            if(response.data.status === 200){
-              _this.$store.commit('login',response.data.object)
+            // console.log(response)
+            if(response.data.code === 1){
+              _this.$store.commit('login',response.data.data)
               // _this.$router.push({path: '/'})
               var path = _this.$route.query.redirect
               _this.$router.replace({path:path === undefined ? '/' : path})
