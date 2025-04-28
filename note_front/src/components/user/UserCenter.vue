@@ -8,11 +8,12 @@
         <!-- 头像上传 -->
         <el-upload
           class="avatar-uploader"
-          action=/common/upload
+          action="#"
+          :http-request="uploadFile"
           :show-file-list="false"
           :on-success="handleAvatarSuccess"
           :before-upload="beforeAvatarUpload">
-          <img v-if="imageUrl" :src="imageUrl" class="avatar">
+          <img v-if="userForm.image" :src="userForm.image" class="avatar">
           <i v-else class="el-icon-plus avatar-uploader-icon"></i>
         </el-upload>
 
@@ -54,6 +55,8 @@
 </template>
 
 <script>
+import axios from "axios";
+
 export default {
   name: 'UserCenter',
   data() {
@@ -67,6 +70,9 @@ export default {
         oldPassword: '',
         newPassword: '',
         confirmPassword: '',
+      },
+      uploadHeaders: {
+        token: localStorage.getItem('token')
       }
     }
   },
@@ -75,38 +81,45 @@ export default {
     this.getUserInfo()
   },
   methods: {
-    // 获取用户信息
     async getUserInfo() {
       try {
-        const userId = JSON.parse(localStorage.getItem("user")).id
-        const res = await request.get(`/user/${userId}`)
-        this.userForm = { ...res.data }
+        const userId = localStorage.getItem('userId') || (this.$store.state.currentUser && this.$store.state.currentUser.id);
+        const response = await this.$axios.get(`/user/${userId}`);
+        // console.log('接口返回数据:', response.data.data);
+        this.userForm = response.data.data;
       } catch (error) {
-        this.$message.error('获取用户信息失败')
+        this.$message.error('获取用户信息失败');
       }
     },
 
     // 保存修改
     async submitForm() {
+      if (this.userForm.oldPassword && this.userForm.oldPassword === this.userForm.newPassword) {
+        this.$message.error('新密码不能和旧密码相同!');
+        return;
+      }
+      if (this.userForm.newPassword !== this.userForm.confirmPassword) {
+        this.$message.error('新密码与确认密码不一致!');
+        return;
+      }
       try {
         const params = {
-          id: this.userForm.id,
-          username: this.userForm.username,
           email: this.userForm.email,
           gender: this.userForm.gender,
+          id: this.userForm.id,
           image: this.userForm.image,
-          Password: this.userForm.newPassword,
+          password: this.userForm.newPassword,
+          username: this.userForm.username,
         }
-        await request.put('/user', params)
+        await this.$axios.put('/user', params)
         this.$message.success('修改成功')
       } catch (error) {
         this.$message.error(`修改失败: ${error.message}`)
       }
     },
 
-    // 头像上传
     handleAvatarSuccess(res, file) {
-      this.image = URL.createObjectURL(file.raw);
+      this.userForm.image = URL.createObjectURL(file.raw);
     },
     beforeAvatarUpload(file) {
       const isJPG = file.type === 'image/jpeg';
@@ -119,6 +132,18 @@ export default {
         this.$message.error('上传头像图片大小不能超过 2MB!');
       }
       return isJPG && isLt2M;
+    },
+    uploadFile(file) {
+      const formData = new FormData();
+      formData.append('file', file.file);
+
+      this.$axios.post('/common/upload', formData)
+        .then(response => {
+          file.onSuccess(response.data);
+        })
+        .catch(error => {
+          file.onError(error);
+        });
     }
   }
 }

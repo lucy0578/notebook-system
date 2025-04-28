@@ -27,7 +27,17 @@ Vue.use(VueAxios,axios);
 
 Vue.use(mavonEditor)
 
+axios.interceptors.request.use(config => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.token = token;
+  }
+  return config;
+}, error => {
+  return Promise.reject(error);
+});
 
+Vue.prototype.$axios = axios;
 
 router.beforeEach((to,from,next) =>{
   if(to.meta.requireAuth){
