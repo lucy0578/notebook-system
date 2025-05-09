@@ -1,27 +1,30 @@
 <template>
   <el-container>
     <el-header class="header">
-      <h2>我的笔记本</h2>
-      <el-button type="primary" @click="showCreate = true">新建笔记</el-button>
+      <h2>My Notebooks</h2>
+      <div class="header-actions">
+        <el-button type="primary" @click="showCreate = true">New Notebook</el-button>
+        <el-button @click="goRecycleBin">Recycle Bin</el-button>
+      </div>
     </el-header>
     <el-main>
       <NotebookList ref="notebookListRef" @edit="onEdit" />
     </el-main>
-    <el-dialog v-model="showCreate" title="新建笔记" width="400px">
+    <el-dialog v-model="showCreate" title="Create New Notebook" width="400px">
       <el-form :model="form">
-        <el-form-item label="分类">
+        <el-form-item label="Category">
           <el-input v-model="form.category" />
         </el-form-item>
-        <el-form-item label="用户ID">
+        <el-form-item label="User ID">
           <el-input v-model="form.userId" />
         </el-form-item>
-        <el-form-item label="标题">
+        <el-form-item label="Title">
           <el-input v-model="form.title" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="showCreate = false">取消</el-button>
-        <el-button type="primary" @click="createNotebook">创建</el-button>
+        <el-button @click="showCreate = false">Cancel</el-button>
+        <el-button type="primary" @click="createNotebook">Create</el-button>
       </template>
     </el-dialog>
   </el-container>
@@ -51,12 +54,16 @@ const createNotebook = async () => {
   await axios.post('http://localhost:8080/notebook_create', notebookData)
   showCreate.value = false
   notebookListRef.value.fetchNotebooks()
-  // 重置表单
+  // Reset form
   form.value = { category: '', userId: '', title: '' }
 }
 
 const onEdit = (id) => {
   router.push(`/edit/${id}`)
+}
+
+const goRecycleBin = () => {
+  router.push('/recycle')
 }
 </script>
 
@@ -68,6 +75,11 @@ const onEdit = (id) => {
   padding: 0 20px;
   background-color: white;
   border-bottom: 1px solid #eee;
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
 }
 
 .el-header {

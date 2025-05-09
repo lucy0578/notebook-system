@@ -1,0 +1,71 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+yarn.lock
+package-lock.json
+
+# Build outputs
+dist/
+dist-ssr/
+build/
+*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Editor and IDE files
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Cache directories
+.cache/
+.temp/
+.tmp/
+
+# Test coverage
+coverage/
+
+# Compiled output
+*.min.js
+*.min.css
+
+# Asset source files
+*.psd
+*.ai
+*.sketch
+
+# Temporary files
+*.tmp
+*.temp
+*~
+
+# Vue.js specific
+*.vue.js
+*.vue.map
