@@ -85,10 +85,10 @@ const fetchNotebooks = async () => {
   try {
     isLoading.value = true
     
-    // Use GET method to fetch notebook list
+    // Use relative path for fetching notebook list
     const url = userId.value 
-      ? `http://localhost:8080/notebook/${userId.value}`
-      : 'http://localhost:8080/notebook'
+      ? `/notebook/${userId.value}`
+      : '/notebook'
     console.log('Request URL:', url)
     
     const res = await axios.get(url)
@@ -142,8 +142,8 @@ const confirmDelete = (notebook) => {
 const deleteNotebook = async (id) => {
   try {
     console.log('Deleting notebook:', id)
-    // Use DELETE method，传递data参数
-    const res = await axios.delete(`http://localhost:8080/notebook_remove`, {
+    // Use relative path for delete method
+    const res = await axios.delete('/notebook_remove', {
       data: {
         notebookId: id,
         userId: userId.value
@@ -173,7 +173,7 @@ const deleteNotebook = async (id) => {
   }
 }
 
-// Toggle public status logic with new request format
+// Toggle public status logic with relative URL
 const togglePublicStatus = async (notebook, index) => {
   try {
     const isPublic = notebook.public
@@ -187,10 +187,10 @@ const togglePublicStatus = async (notebook, index) => {
     
     // Determine which API endpoint to use
     const url = isPublic 
-      ? 'http://localhost:8080/notebook_unpublic'  // Make private
-      : 'http://localhost:8080/notebook_public'    // Make public
+      ? '/notebook_unpublic'  // Make private
+      : '/notebook_public'    // Make public
       
-    // Send request to backend
+    // Send request to backend with relative path
     const response = await axios.put(url, requestData)
     
     // Check response result
@@ -288,4 +288,4 @@ defineExpose({ fetchNotebooks })
 :deep(.el-table tr:hover) {
   background-color: #ecf5ff;
 }
-</style> 
+</style>

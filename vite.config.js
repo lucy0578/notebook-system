@@ -2,40 +2,45 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
-      '@': resolve(__dirname, 'src')
+      '@': resolve(__dirname, 'src') // 确保路径别名配置
     }
   },
   server: {
-    host: true,
-    port: 5173,
-    strictPort: true,
-    hmr: {
-      host: 'localhost',
-      port: 5173,
-      protocol: 'ws'
-    },
+    host: '0.0.0.0', // 允许局域网访问
+    port: 5173,      // 指定端口（可选）
     proxy: {
+      // HTTP API 代理
       '/api': {
-        target: 'http://[2001:da8:200b:c680:3946:f5d1:29:c0aa]:8080',
+        // target: 'http://localhost:8080/',
+        target: 'http://10.252.159.239:8080',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
-        configure: (proxy, options) => {
-          proxy.on('error', (err, req, res) => {
-            console.log('proxy error', err);
-          });
-          proxy.on('proxyReq', (proxyReq, req, res) => {
-            console.log('Sending Request to the Target:', req.method, req.url);
-          });
-          proxy.on('proxyRes', (proxyRes, req, res) => {
-            console.log('Received Response from the Target:', proxyRes.statusCode, req.url);
-          });
+        // 可选：添加更多请求头
+        headers: {
+          'Proxy-Connection': 'keep-alive'
+        }
+      },
+      // WebSocket 代理
+      '/ws': {
+        target: 'ws://10.252.159.239:8080',
+        ws: true,
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/ws/, ''),
+        // 关键：WebSocket 需要特殊头部
+        headers: {
+          Connection: 'Upgrade',
+          Upgrade: 'websocket'
         }
       }
     }
+  },
+  // 生产环境配置（可选）
+  build: {
+    outDir: 'dist',
+    assetsDir: 'static'
   }
 })

@@ -96,7 +96,7 @@ const saveNote = async () => {
 
     console.log('Sending data:', payload);
 
-    const res = await axios.post('http://localhost:8080/noteContent_create', payload);
+    const res = await axios.post('/noteContent_create', payload);
     
     if (res.data?.code === 1) {
       // Successfully updated
@@ -135,7 +135,7 @@ const saveNote = async () => {
 const fetchLatestNote = async () => {
   try {
     console.log('Getting latest note content...');
-    const res = await axios.get(`http://localhost:8080/noteContent/${props.notebookId}`);
+    const res = await axios.get(`/noteContent/${props.notebookId}`);
     
     if (res.data?.code === 1 && res.data.data) {
       // Get old version number for logging
@@ -223,7 +223,7 @@ const setupWebSocket = () => {
     }
     
     // Establish WebSocket connection
-    websocket = new WebSocket(`ws://localhost:8080/ws/${clientId}`);
+    websocket = new WebSocket(`ws://localhost:5173/ws/${clientId}`);
     
     // When connection is established
     websocket.onopen = () => {

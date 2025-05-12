@@ -1,5 +1,7 @@
 import { createStore } from 'vuex'
 import { ElMessage } from 'element-plus'
+import axios from 'axios'
+import router from '../router'
 
 const store = createStore({
   state: {
@@ -8,16 +10,18 @@ const store = createStore({
   },
 
   mutations: {
-    login(state, data) {
-      state.user = data.user
-      state.token = data.token
-      localStorage.setItem('token', data.token)
+    login(state, userData) {
+      state.user = userData
+      state.token = userData.token
+      localStorage.setItem("user", JSON.stringify(userData))
+      localStorage.setItem("token", userData.token)
     },
 
     logout(state) {
       state.user = null
       state.token = null
       localStorage.removeItem('token')
+      localStorage.removeItem('user')
     },
 
     updateUser(state, user) {
@@ -26,24 +30,35 @@ const store = createStore({
   },
 
   actions: {
+    async login({ commit }, credentials) {
+      try {
+        const response = await axios.post('/login', credentials)
+        if (response.data) {
+          commit('login', response.data)
+          // 登录成功后跳转到 home 页面
+          router.push('/home')
+          return true
+        }
+        return false
+      } catch (error) {
+        console.error('Login failed:', error)
+        if (error.response?.status === 401) {
+          ElMessage.error('用户名或密码错误')
+        } else {
+          ElMessage.error('登录失败，请稍后重试')
+        }
+        return false
+      }
+    },
+
     async checkAuth({ state, commit }) {
       if (!state.token) return false
 
       try {
-        const response = await fetch('/api/user/profile', {
-          headers: {
-            'Authorization': `Bearer ${state.token}`
-          }
-        })
-
-        if (response.ok) {
-          const data = await response.json()
-          commit('updateUser', data.user)
-          return true
-        } else {
-          commit('logout')
-          return false
-        }
+        const response = await axios.get('/user/profile')
+        console.log('Auth check response:', response)
+        commit('updateUser', response.data.user)
+        return true
       } catch (error) {
         console.error('Auth check failed:', error)
         ElMessage.error('身份验证失败')
@@ -54,13 +69,12 @@ const store = createStore({
 
     async logout({ commit }) {
       try {
-        await fetch('/api/logout', {
-          method: 'POST'
-        })
+        await axios.post('/logout')
       } catch (error) {
         console.error('Logout failed:', error)
       } finally {
         commit('logout')
+        router.push('/login')
       }
     }
   },
@@ -75,7 +89,7 @@ const store = createStore({
 // 导航守卫
 export const setupAuthGuard = (router) => {
   router.beforeEach(async (to, from, next) => {
-    const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
+    const requiresAuth = to.meta.requiresAuth
     const isLoginPage = to.path === '/login'
     const isRegisterPage = to.path === '/register'
     const isWelcomePage = to.path === '/welcome'
@@ -95,17 +109,6 @@ export const setupAuthGuard = (router) => {
         query: { redirect: to.fullPath }
       })
       return
-    }
-
-    if (requiresAuth && store.getters.isAuthenticated) {
-      const isAuthed = await store.dispatch('checkAuth')
-      if (!isAuthed) {
-        next({
-          path: '/login',
-          query: { redirect: to.fullPath }
-        })
-        return
-      }
     }
 
     next()

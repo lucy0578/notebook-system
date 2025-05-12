@@ -43,19 +43,24 @@ const router = useRouter()
 const notebookListRef = ref(null)
 
 const createNotebook = async () => {
-  const notebookData = {
-    category: form.value.category || '',
-    title: form.value.title || '',
-    userId: parseInt(form.value.userId) || 0,
-    notebookId: 0,
-    createTime: ''
+  try {
+    const notebookData = {
+      category: form.value.category || '',
+      title: form.value.title || '',
+      userId: parseInt(form.value.userId) || 0,
+      notebookId: 0,
+      createTime: ''
+    }
+
+    await axios.post('/notebook_create', notebookData)
+    showCreate.value = false
+    notebookListRef.value.fetchNotebooks()
+    // Reset form
+    form.value = { category: '', userId: '', title: '' }
+  } catch (error) {
+    console.error('Failed to create notebook:', error)
+    alert('Failed to create notebook: ' + (error.response?.data?.message || error.message))
   }
-  
-  await axios.post('http://localhost:8080/notebook_create', notebookData)
-  showCreate.value = false
-  notebookListRef.value.fetchNotebooks()
-  // Reset form
-  form.value = { category: '', userId: '', title: '' }
 }
 
 const onEdit = (id) => {

@@ -1,7 +1,6 @@
 <template>
     <div class="container">
       <el-row class="form-body">
-        <h2>登录</h2>
       <el-form
         ref="formRef"
         :model="loginForm"
@@ -90,20 +89,17 @@ const onSubmit = async () => {
     await formRef.value.validate()
     loading.value = true
     
-    const response = await axios.post('/api/login', {
+    const success = await store.dispatch('login', {
       username: loginForm.username,
       password: loginForm.password
             })
     
-    if (response.data.code === 1) {
-      store.commit('login', response.data.data)
+    if (success) {
       ElMessage.success('登录成功')
-      
-      const path = route.query.redirect || '/'
+      const path = route.query.redirect || '/home'
+      // console.log('即将跳转到:', path)
       await router.replace(path)
-    } else {
-      ElMessage.error('账号或密码错误')
-              }
+    }
   } catch (error) {
     if (error.message) {
       ElMessage.error(error.message)
@@ -121,39 +117,58 @@ const toRegister = () => {
   
   <style scoped>
 .container {
-      height: 100%;
-      width: 100%;
+  height: 100vh;
+  width: 100vw;
   background-image: url("@/assets/homeMask.png");
-      background-size: cover;
-      position: fixed;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  position: fixed;
   left: 0;
   top: 0;
-      padding-top: 30px;
-    }
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
 
 .form-body {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-  transform: translate(-50%, -50%);
-      border-radius: 10px;
-      margin: 0 auto;
-      width: 25%;
-      min-width: 300px;
-  padding: 30px 30px 15px;
-  background-color: rgba(255, 255, 255, 0.8);
-  box-shadow: 5px 3px 10px rgba(0, 0, 0, 0.9);
-    }
+  border-radius: 10px;
+  width: 25%;
+  min-width: 300px;
+  padding: 30px;
+  background-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.form-body h2 {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.form-item {
+  margin-bottom: 20px;
+}
 
 .form-confirm {
-      width: 100%;
-      background-color: #585858;
-      border: 2px solid #484848;
-      border-radius: 4px;
-    }
+  width: 100%;
+  background-color: #585858;
+  border: none;
+  border-radius: 4px;
+  color: white;
+  padding: 12px;
+  margin-top: 10px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.form-confirm:hover {
+  background-color: #484848;
+}
 
 :deep(.el-input__wrapper) {
   background-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 :deep(.el-form-item__error) {
