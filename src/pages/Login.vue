@@ -133,21 +133,38 @@ const toRegister = () => {
 
 .form-body {
   border-radius: 10px;
-  width: 25%;
-  min-width: 300px;
-  padding: 30px;
+  width: 20%;
+  min-width: 250px;
+  padding: 25px;
   background-color: rgba(255, 255, 255, 0.9);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* 确保表单和表单项居中 */
+:deep(.el-form) {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+:deep(.el-form-item) {
+  width: 80%;  /* 让输入框比容器稍窄一些 */
+  margin-bottom: 20px;
+}
+
+/* 确保输入框和按钮的宽度一致 */
+:deep(.el-input) {
+  width: 100%;
 }
 
 .form-body h2 {
   text-align: center;
   margin-bottom: 20px;
   color: #333;
-}
-
-.form-item {
-  margin-bottom: 20px;
 }
 
 .form-confirm {
