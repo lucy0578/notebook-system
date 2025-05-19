@@ -1,0 +1,17 @@
+usercenter
+修改信息需要给后端传id但是好像没有传
+ui长得像手机端，上面的导航栏大小会变
+
+login
+储存的token是undifined
+无法跳转至home页面
+
+创建笔记本
+Failed to create notebook: Request failed with status code 500，但是书架页面显示创建成功了
+
+书架
+无法删除笔记，删除笔记失败
+
+我的群组
+“解散群组”、“邀请成员”ui不对齐
+感觉这个页面ui都不太行
