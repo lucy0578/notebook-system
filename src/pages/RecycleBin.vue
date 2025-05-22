@@ -59,7 +59,7 @@ const fetchRecycleNotes = async () => {
   hasSearched.value = true
   try {
     isLoading.value = true
-    const url = `http://localhost:8080/notebook_list/${userId.value}`
+    const url = `/notebook_list/${userId.value}`
     const res = await axios.get(url)
     if (res.data && res.data.code === 1) {
       notebooks.value = res.data.data || []
@@ -80,7 +80,7 @@ const fetchRecycleNotes = async () => {
 
 const recoverNotebook = async (notebookId) => {
   try {
-    await axios.put(`http://localhost:8080/notebook_recover/${notebookId}`)
+    await axios.put(`/notebook_recover/${notebookId}`)
     ElMessage.success('Notebook recovered successfully')
     fetchRecycleNotes()
   } catch (error) {
@@ -90,7 +90,7 @@ const recoverNotebook = async (notebookId) => {
 
 const deleteNotebook = async (notebookId) => {
   try {
-    await axios.delete(`http://localhost:8080/notebook_delete/${notebookId}`)
+    await axios.delete(`/notebook_delete/${notebookId}`)
     ElMessage.success('Notebook deleted permanently')
     fetchRecycleNotes()
   } catch (error) {

@@ -16,7 +16,7 @@ export default defineConfig({
       // HTTP API 代理
       '/api': {
         // target: 'http://localhost:8080/',
-        target: 'http://10.252.146.204:8080',
+        target: 'http://10.252.145.201:8080',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
         // 可选：添加更多请求头
@@ -38,17 +38,9 @@ export default defineConfig({
           });
         }
       },
-      // 添加 /common 路径的代理
-      '/common': {
-        target: 'http://10.252.146.204:8080',
-        changeOrigin: true,
-        // 增加代理超时设置
-        timeout: 30000, // 30秒超时
-        proxyTimeout: 30000
-      },
       // WebSocket 代理
       '/ws': {
-        target: 'ws://10.252.146.204:8080',
+        target: 'ws://10.252.145.201:8080',
         //target: 'http://localhost:8080/',
         ws: true,
         changeOrigin: true,

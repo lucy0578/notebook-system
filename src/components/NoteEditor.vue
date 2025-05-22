@@ -61,6 +61,9 @@ let websocket = null
 const clientId = Math.random().toString(36).substr(2)
 const lastWsMsg = ref('')
 const editorReady = ref(false)
+let reconnectAttempts = 0
+const MAX_RECONNECT_ATTEMPTS = 5
+const RECONNECT_INTERVAL = 3000 // 3 seconds
 
 // Wait for editor to be ready
 const waitForEditor = async () => {
@@ -185,35 +188,6 @@ const fetchNote = async () => {
   }
 };
 
-// Send note content update via WebSocket
-const sendNoteContentUpdate = () => {
-  try {
-    if (!websocket || websocket.readyState !== WebSocket.OPEN) {
-      console.warn('WebSocket connection not open, trying to reconnect');
-      setupWebSocket();
-      setTimeout(() => {
-        sendNoteContentUpdate();
-      }, 500);
-      return;
-    }
-
-    // Prepare NoteContentTransform object expected by backend
-    const noteContentTransform = {
-      notebookId: parseInt(note.value.notebookId),
-      version: note.value.version,
-      content: note.value.content,
-      delta: {},
-      clientId: clientId // Add clientId for backend identification
-    };
-
-    // Send message
-    websocket.send(JSON.stringify(noteContentTransform));
-    console.log('Note update sent via WebSocket:', noteContentTransform);
-  } catch (error) {
-    console.error('Failed to send WebSocket note update:', error);
-  }
-};
-
 // WebSocket related
 const setupWebSocket = () => {
   try {
@@ -222,12 +196,25 @@ const setupWebSocket = () => {
       websocket.close();
     }
     
-    // Establish WebSocket connection
-    websocket = new WebSocket(`ws://localhost:5173/ws/${clientId}`);
+    // Check if we've exceeded max reconnection attempts
+    if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+      console.warn('Max WebSocket reconnection attempts reached');
+      ElMessage.warning('实时协作功能暂时不可用，请刷新页面重试');
+      return;
+    }
+    
+    // Get the current host and protocol
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.host;
+    
+    // Establish WebSocket connection with full URL
+    websocket = new WebSocket(`/ws/${clientId}`);
     
     // When connection is established
     websocket.onopen = () => {
       console.log('WebSocket connection established, client ID:', clientId);
+      reconnectAttempts = 0; // Reset reconnect attempts on successful connection
+      lastWsMsg.value = ''; // Clear any error messages
     };
     
     // Receive messages
@@ -256,25 +243,6 @@ const setupWebSocket = () => {
         } else if (message.includes('笔记内容没有更新')) {
           // Content not changed - only happens during save, current user already handled via HTTP response
           console.log('Received content not changed notification, HTTP response already handled');
-        } else {
-          // Try to parse JSON message
-          try {
-            const data = JSON.parse(message);
-            // Check if it's our own message
-            if (data.clientId === clientId) {
-              console.log('Ignoring own WebSocket message');
-              return;
-            }
-            
-            if (data.code === 1 && data.msg) {
-              ElMessage.success(data.msg);
-            } else if (data.code === 0 && data.msg) {
-              ElMessage.warning(data.msg);
-            }
-          } catch {
-            // Non-JSON message, display directly
-            console.log('Received non-JSON format WebSocket message:', message);
-          }
         }
       } catch (error) {
         console.error('Failed to process WebSocket message:', error);
@@ -282,16 +250,34 @@ const setupWebSocket = () => {
     };
     
     // Connection closed
-    websocket.onclose = () => {
-      console.log('WebSocket connection closed');
+    websocket.onclose = (event) => {
+      console.log('WebSocket connection closed:', event.code, event.reason);
+      
+      // Don't attempt to reconnect if the connection was closed normally
+      if (event.code === 1000) {
+        console.log('WebSocket connection closed normally');
+        return;
+      }
+      
+      // Attempt to reconnect if not at max attempts
+      if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+        reconnectAttempts++;
+        console.log(`Attempting to reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
+        setTimeout(setupWebSocket, RECONNECT_INTERVAL);
+      } else {
+        console.warn('Max reconnection attempts reached');
+        ElMessage.warning('实时协作功能暂时不可用，请刷新页面重试');
+      }
     };
     
     // Connection error
     websocket.onerror = (error) => {
       console.error('WebSocket connection error:', error);
+      // Don't increment reconnectAttempts here as onclose will handle it
     };
   } catch (error) {
     console.error('WebSocket connection failed:', error);
+    ElMessage.error('WebSocket connection failed: ' + error.message);
   }
 };
 
@@ -360,6 +346,34 @@ const downloadAsWord = async () => {
     ElMessage.error('Download failed, please try again later')
   }
 }
+
+// Send note content update via WebSocket
+const sendNoteContentUpdate = () => {
+  try {
+    if (!websocket || websocket.readyState !== WebSocket.OPEN) {
+      console.warn('WebSocket connection not open, trying to reconnect');
+      setupWebSocket();
+      // Don't retry sending the message immediately
+      return;
+    }
+
+    // Prepare NoteContentTransform object expected by backend
+    const noteContentTransform = {
+      notebookId: parseInt(note.value.notebookId),
+      version: note.value.version,
+      content: note.value.content,
+      delta: {},
+      clientId: clientId
+    };
+
+    // Send message
+    websocket.send(JSON.stringify(noteContentTransform));
+    console.log('Note update sent via WebSocket:', noteContentTransform);
+  } catch (error) {
+    console.error('Failed to send WebSocket note update:', error);
+    ElMessage.error('Failed to send update: ' + error.message);
+  }
+};
 
 // Initialize when component is mounted
 onMounted(async () => {

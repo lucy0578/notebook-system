@@ -1,30 +1,38 @@
 <template>
-  <div class="message-center">
-    <h3>消息中心</h3>
-
-    <div v-if="pendingMessages.length === 0" class="no-messages">
-      暂无待处理消息
-    </div>
-
-    <el-card v-for="message in pendingMessages" :key="message.id" class="message-card">
-      <div class="message-content">
-        <div class="message-info">
-          <!-- 显示邀请/申请的内容 -->
-          <template v-if="message.type === 'invite'">
-            <p><b>{{ message.fromUserName }}</b> 邀请您加入群组 <b>{{ message.groupName }}</b></p>
-          </template>
-          <template v-else-if="message.type === 'apply'">
-            <p><b>{{ message.fromUserName }}</b> 申请加入群组 <b>{{ message.groupName }}</b></p>
-          </template>
-          <p class="message-time">{{ formatTime(message.createTime) }}</p>
+  <el-container>
+    <el-header style="padding: 0; height: auto; z-index: 1000;">
+      <NavMenu />
+    </el-header>
+    <el-container>
+      <el-header class="content-header">
+        <h2>消息中心</h2>
+      </el-header>
+      <el-main>
+        <div v-if="pendingMessages.length === 0" class="no-messages">
+          暂无待处理消息
         </div>
-        <div class="message-actions">
-          <el-button type="success" size="small" @click="handleAccept(message)">接受</el-button>
-          <el-button type="danger" size="small" @click="handleReject(message)">拒绝</el-button>
-        </div>
-      </div>
-    </el-card>
-  </div>
+
+        <el-card v-for="message in pendingMessages" :key="message.id" class="message-card">
+          <div class="message-content">
+            <div class="message-info">
+              <!-- 显示邀请/申请的内容 -->
+              <template v-if="message.type === 'invite'">
+                <p><b>{{ message.fromUserName }}</b> 邀请您加入群组 <b>{{ message.groupName }}</b></p>
+              </template>
+              <template v-else-if="message.type === 'apply'">
+                <p><b>{{ message.fromUserName }}</b> 申请加入群组 <b>{{ message.groupName }}</b></p>
+              </template>
+              <p class="message-time">{{ formatTime(message.createTime) }}</p>
+            </div>
+            <div class="message-actions">
+              <el-button type="success" size="small" @click="handleAccept(message)">接受</el-button>
+              <el-button type="danger" size="small" @click="handleReject(message)">拒绝</el-button>
+            </div>
+          </div>
+        </el-card>
+      </el-main>
+    </el-container>
+  </el-container>
 </template>
 
 <script setup>
@@ -35,7 +43,7 @@ import axios from 'axios'
 // 获取当前用户ID
 const currentUser = ref(localStorage.getItem('user'))
 const user = JSON.parse(currentUser.value)
-const userId = user.id
+const userId = user.id  // 直接使用 user.id，因为数据结构是扁平的
 
 // 待处理消息列表
 const pendingMessages = ref([])
@@ -43,22 +51,32 @@ const pendingMessages = ref([])
 // 获取待处理消息
 const fetchPendingMessages = async () => {
   try {
-    const response = await axios.get(`/view_group_request/${userId}`)
+    const response = await axios.get(`/show_group_requset/${userId}`)
     if (response.data.code === 1 && response.data.data) {
-      pendingMessages.value = response.data.data
+      pendingMessages.value = response.data.data.map(request => ({
+        id: request.id,
+        type: request.type,  // 'invite' 或 'apply'
+        fromUserId: request.fromUserId,
+        groupId: request.groupId,
+        createTime: request.createTime,
+        status: request.status,
+        // 这里可能需要额外的API调用来获取用户名和群组名
+        fromUserName: `用户${request.fromUserId}`,  // 临时显示，后续可以优化
+        groupName: `群组${request.groupId}`  // 临时显示，后续可以优化
+      }))
     } else {
       pendingMessages.value = []
     }
   } catch (error) {
     console.error('获取待处理消息失败:', error)
-    ElMessage.error('获取待处理消息失败')
+    ElMessage.error('获取待处理消息失败: ' + (error.response?.data?.msg || error.message))
   }
 }
 
 // 接受邀请/申请
 const handleAccept = async (message) => {
   try {
-    const response = await axios.get(`/agree_group_request/${message.id}`)
+    const response = await axios.get(`/agree_request/${message.id}`)
     if (response.data.code === 1) {
       ElMessage.success('已接受')
       // 移除当前消息
@@ -75,7 +93,7 @@ const handleAccept = async (message) => {
 // 拒绝邀请/申请
 const handleReject = async (message) => {
   try {
-    const response = await axios.get(`/refuse_group_request/${message.id}`)
+    const response = await axios.get(`/refuse_request/${message.id}`)
     if (response.data.code === 1) {
       ElMessage.success('已拒绝')
       // 移除当前消息
@@ -104,38 +122,78 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.message-center {
+.content-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px;
+  background-color: white;
+  border-bottom: 1px solid #eee;
+  height: 60px;
+  margin-top: 1px;
+}
+
+h2 {
+  margin: 0;
+  color: #409EFF;
+  font-weight: 500;
+}
+
+:deep(.el-main) {
   padding: 20px;
+  background-color: #f5f7fa;
 }
 
 .no-messages {
   text-align: center;
-  color: #999;
+  color: #909399;
   padding: 40px 0;
+  background-color: white;
+  border-radius: 4px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
 }
 
 .message-card {
   margin-bottom: 15px;
+  transition: transform 0.3s;
+}
+
+.message-card:hover {
+  transform: translateY(-2px);
 }
 
 .message-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 10px;
 }
 
 .message-info {
   flex: 1;
 }
 
+.message-info p {
+  margin: 0;
+  line-height: 1.6;
+}
+
 .message-time {
   font-size: 12px;
-  color: #999;
+  color: #909399;
   margin-top: 8px;
 }
 
 .message-actions {
   display: flex;
   gap: 10px;
+}
+
+:deep(.el-header) {
+  padding: 0;
+}
+
+:deep(.el-menu--horizontal) {
+  border-bottom: none;
 }
 </style> 

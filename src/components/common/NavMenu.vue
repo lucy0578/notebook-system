@@ -82,9 +82,9 @@ const unreadCount = ref(0)
 let checkMessagesTimer = null
 
 const navList = [
-  { name: 'NoteNote', url: '/home' },
-  { name: '书架', url: '/bookshelf' },
-  { name: '我的群组', url: '/groups' }
+  { name: 'OmniNote', url: '/home' },
+  { name: 'Bookshelf', url: '/bookshelf' },
+  { name: 'My Groups', url: '/groups' }
 ]
 
 // 方法
@@ -140,9 +140,9 @@ const fetchUnreadMessagesCount = async () => {
     if (!userStr) return
     
     const userData = JSON.parse(userStr)
-    const userId = userData.data.id
+    const userId = userData.id
     
-    const response = await axios.get(`/view_group_request/${userId}`)
+    const response = await axios.get(`/show_group_request/${userId}`)
     if (response.data.code === 1 && response.data.data) {
       unreadCount.value = response.data.data.length
     } else {
@@ -167,7 +167,6 @@ onMounted(() => {
     userFlag.name = userData.username
     userFlag.menuList = [
       {url: '/usercenter', name: '用户中心'},
-      {url: '/home', name: '笔记管理'},
     ]
     isLogin.value = true
     
@@ -196,9 +195,16 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .nav-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
   width: 100%;
-  position: relative;
   z-index: 1000;
+  background: #fff;
+  padding: 5px;
+  margin: 0;
+  /* box-shadow: 0 2px 8px rgba(0,0,0,0.05); */
 }
 
 .el-menu {
@@ -234,5 +240,10 @@ onBeforeUnmount(() => {
 
 :deep(.el-badge__content) {
   transform: translateY(-5px);
+}
+
+.create-time {
+  font-size: 12px;
+  color: #909399;
 }
 </style>

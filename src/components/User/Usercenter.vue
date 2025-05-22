@@ -4,66 +4,59 @@
       <NavMenu />
     </el-header>
     <el-main>
-      <el-tabs v-model="activeTab" @tab-click="handleTabClick">
-        <el-tab-pane label="个人信息" name="profile">
-          <div class="container">
-            <el-card class="form-body">
-              <template #header>
-                <span>个人信息</span>
-              </template>
-              <el-form ref="formRef" :model="userForm" label-width="0px">
-                <!-- 头像上传 -->
-                <el-upload
-                  class="avatar-uploader"
-                  action="#"
-                  :http-request="uploadFile"
-                  :show-file-list="false"
-                  :on-success="handleAvatarSuccess"
-                  :before-upload="beforeAvatarUpload">
-                  <img v-if="userForm.image" :src="userForm.image" class="avatar">
-                  <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
-                </el-upload>
-        
-                <!-- 用户名 -->
-                <el-form-item>
-                  <el-input placeholder="请输入用户名" v-model="userForm.username"></el-input>
-                </el-form-item>
-        
-                <!-- 性别 -->
-                <el-form-item>
-                  <el-select placeholder="请选择性别" v-model="userForm.gender" style="width: 100%">
-                    <el-option label="男" value="1"></el-option>
-                    <el-option label="女" value="0"></el-option>
-                  </el-select>
-                </el-form-item>
-        
-                <!-- 邮箱 -->
-                <el-form-item>
-                  <el-input placeholder="请输入邮箱" v-model="userForm.email"></el-input>
-                </el-form-item>
-        
-                <!-- 修改密码 -->
-                <el-form-item>
-                  <el-input v-model="userForm.oldPassword" placeholder="旧密码" show-password></el-input>
-                </el-form-item>
-                <el-form-item>
-                  <el-input v-model="userForm.newPassword" placeholder="新密码" show-password></el-input>
-                </el-form-item>
-                <el-form-item>
-                  <el-input v-model="userForm.confirmPassword" placeholder="确认密码" show-password></el-input>
-                </el-form-item>
-        
-                <el-form-item>
-                  <el-button type="primary" @click="submitForm">保存修改</el-button>
-                </el-form-item>
-              </el-form>
-            </el-card>
-          </div>
-        </el-tab-pane>
-        <el-tab-pane label="消息中心" name="messages">
-          <MessageCenter />
-        </el-tab-pane>
-      </el-tabs>
+      <div class="container">
+        <el-card class="form-body">
+          <template #header>
+            <span>Profile</span>
+          </template>
+          <el-form ref="formRef" :model="userForm" label-width="0px">
+            <!-- Avatar upload -->
+            <el-upload
+              class="avatar-uploader"
+              action="#"
+              :http-request="uploadFile"
+              :show-file-list="false"
+              :on-success="handleAvatarSuccess"
+              :before-upload="beforeAvatarUpload">
+              <img v-if="userForm.image" :src="userForm.image" class="avatar">
+              <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
+            </el-upload>
+    
+            <!-- Username -->
+            <el-form-item>
+              <el-input placeholder="Username" v-model="userForm.username"></el-input>
+            </el-form-item>
+    
+            <!-- Gender -->
+            <el-form-item>
+              <el-select placeholder="Gender" v-model="userForm.gender" style="width: 100%">
+                <el-option label="Male" value="1"></el-option>
+                <el-option label="Female" value="0"></el-option>
+              </el-select>
+            </el-form-item>
+    
+            <!-- Email -->
+            <el-form-item>
+              <el-input placeholder="Email" v-model="userForm.email"></el-input>
+            </el-form-item>
+    
+            <!-- Change password -->
+            <el-form-item>
+              <el-input v-model="userForm.oldPassword" placeholder="Old password" show-password></el-input>
+            </el-form-item>
+            <el-form-item>
+              <el-input v-model="userForm.newPassword" placeholder="New password" show-password></el-input>
+            </el-form-item>
+            <el-form-item>
+              <el-input v-model="userForm.confirmPassword" placeholder="Confirm password" show-password></el-input>
+            </el-form-item>
+    
+            <el-form-item class="button-container">
+              <el-button type="primary" @click="submitForm">Save</el-button>
+            </el-form-item>
+          </el-form>
+        </el-card>
+      </div>
     </el-main>
   </el-container>
 </template>
@@ -75,13 +68,11 @@ import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import axios from 'axios'
 import NavMenu from '../common/NavMenu.vue'
-import MessageCenter from './MessageCenter.vue'
 import { useRouter } from 'vue-router'
 
 const store = useStore()
 const formRef = ref(null)
 const router = useRouter()
-const activeTab = ref('profile')
 
 const userForm = reactive({
   id: '',
@@ -94,21 +85,12 @@ const userForm = reactive({
   confirmPassword: ''
 })
 
-const handleTabClick = (tab) => {
-  console.log('Tab clicked:', tab.props.name)
-}
-
-const uploadHeaders = {
-  token: localStorage.getItem('token'),
-  'Content-Type': 'multipart/form-data'
-}
-
-// 获取用户信息
+// Get user information
 const getUserInfo = async () => {
   try {
     const userStr = localStorage.getItem('user')
     if (!userStr) {
-      ElMessage.error('未找到用户信息，请重新登录')
+      ElMessage.error('User information not found, please login again')
       router.push('/login')
       return
     }
@@ -117,7 +99,7 @@ const getUserInfo = async () => {
     const userId = userData.id
     
     if (!userId) {
-      ElMessage.error('用户ID无效，请重新登录')
+      ElMessage.error('Invalid user ID, please login again')
       router.push('/login')
       return
     }
@@ -126,27 +108,27 @@ const getUserInfo = async () => {
     if (response.data && response.data.code === 1) {
       Object.assign(userForm, response.data.data)
     } else {
-      ElMessage.error(response.data?.msg || '获取用户信息失败')
+      ElMessage.error(response.data?.msg || 'Failed to get user information')
     }
   } catch (error) {
-    console.error('获取用户信息失败:', error)
+    console.error('Failed to get user information:', error)
     if (error.response?.status === 400) {
-      ElMessage.error('用户信息获取失败，请确保已登录')
+      ElMessage.error('Failed to get user information, please ensure you are logged in')
       router.push('/login')
     } else {
-      ElMessage.error('获取用户信息失败，请稍后重试')
+      ElMessage.error('Failed to get user information, please try again later')
     }
   }
 }
 
-// 保存修改
+// Save changes
 const submitForm = async () => {
   if (userForm.oldPassword && userForm.oldPassword === userForm.newPassword) {
-    ElMessage.error('新密码不能和旧密码相同!')
+    ElMessage.error('New password cannot be the same as the old password!')
     return
   }
   if (userForm.newPassword !== userForm.confirmPassword) {
-    ElMessage.error('新密码与确认密码不一致!')
+    ElMessage.error('New password and confirm password do not match!')
     return
   }
   try {
@@ -160,13 +142,13 @@ const submitForm = async () => {
     }
     const response = await axios.put('/user', params)
     if (response.data && response.data.code === 1) {
-      ElMessage.success('修改成功')
+      ElMessage.success('Changes saved successfully')
     } else {
-      ElMessage.error(response.data?.msg || '修改失败')
+      ElMessage.error(response.data?.msg || 'Failed to save changes')
     }
   } catch (error) {
-    console.error('修改失败:', error)
-    ElMessage.error(`修改失败: ${error.message}`)
+    console.error('Failed to save changes:', error)
+    ElMessage.error(`Failed to save changes: ${error.message}`)
   }
 }
 
@@ -174,16 +156,16 @@ const uploadFile = async (params) => {
   const formData = new FormData()
   formData.append('file', params.file)
     
-  // 获取用户信息
+  // Get user information
   const userStr = localStorage.getItem('user')
   if (!userStr) {
-    ElMessage.error('未找到用户信息，请重新登录')
+    ElMessage.error('User information not found, please login again')
     router.push('/login')
     return
   }
   const userData = JSON.parse(userStr)
     
-  // 添加用户ID到请求
+  // Add user ID to request
   formData.append('userId', userData.id)
 
   try {
@@ -191,13 +173,13 @@ const uploadFile = async (params) => {
     if (response.data && response.data.code === 1) {
       params.onSuccess(response.data)
       userForm.image = response.data.data
-      ElMessage.success('头像上传成功')
+      ElMessage.success('Avatar uploaded successfully')
     } else {
-      throw new Error(response.data?.msg || '上传失败')
+      throw new Error(response.data?.msg || 'Upload failed')
     }
   } catch (error) {
     console.error('Upload error:', error)
-    ElMessage.error(error.message || '上传失败')
+    ElMessage.error(error.message || 'Upload failed')
     params.onError(error)
   }
 }
@@ -217,11 +199,11 @@ const beforeAvatarUpload = (file) => {
   })
 
   if (!isJPG) {
-    ElMessage.error('上传头像图片只能是 JPG 格式!')
+    ElMessage.error('Avatar must be in JPG format!')
     return false
   }
   if (!isLt2M) {
-    ElMessage.error('上传头像图片大小不能超过 2MB!')
+    ElMessage.error('Avatar size cannot exceed 2MB!')
     return false
   }
   return true
@@ -230,11 +212,6 @@ const beforeAvatarUpload = (file) => {
 // 生命周期钩子
 onMounted(() => {
   getUserInfo()
-  
-  // 检查URL是否包含消息中心的标记
-  if (window.location.hash.includes('messages')) {
-    activeTab.value = 'messages'
-  }
 })
 </script>
 
@@ -244,27 +221,34 @@ onMounted(() => {
   display: flex;
   justify-content: center;
   align-items: flex-start;
+  width: 1200px;
   padding: 20px;
 }
 
 .form-body {
-  width: 35%;
+  width: 40%;
   min-width: 350px;
   border-radius: 8px;
   box-shadow: 0 2px 12px 0 rgba(0,0,0,0.1);
 }
 
+.button-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
 .avatar-uploader .el-upload {
-  border: 1px dashed #d9d9d9;
+  border: 1px dashed var(--el-border-color);
   border-radius: 6px;
   cursor: pointer;
   position: relative;
   overflow: hidden;
-  transition: all 0.3s;
+  transition: var(--el-transition-duration-fast);
 }
 
 .avatar-uploader .el-upload:hover {
-  border-color: #409EFF;
+  border-color: var(--el-color-primary);
 }
 
 .avatar-uploader-icon {
