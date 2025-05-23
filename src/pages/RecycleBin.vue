@@ -1,9 +1,15 @@
 <template>
   <div class="recycle-bin-container">
     <div class="recycle-header">
-      <h2>🗑️ Recycle Bin</h2>
+      <div class="header-top">
+        <h2>🗑️ Recycle Bin</h2>
+        <el-button class="back-btn" @click="goToBookshelf">
+          <el-icon><ArrowLeft /></el-icon>
+          Back to Bookshelf
+        </el-button>
+      </div>
       <div class="recycle-search">
-        <el-input v-model="userId" placeholder="Enter User ID to search" class="user-input" clearable />
+        <el-input v-model="userId" placeholder="Enter User ID to search" class="user-input" clearable :prefix-icon="User"/>
         <el-button type="primary" class="search-btn" @click="fetchRecycleNotes">Search</el-button>
       </div>
     </div>
@@ -37,8 +43,12 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
+import { ArrowLeft, User } from '@element-plus/icons-vue'
+
+const router = useRouter()
 
 const notebooks = ref([])
 const userId = ref('')
@@ -96,6 +106,10 @@ const deleteNotebook = async (notebookId) => {
   } catch (error) {
     ElMessage.error('Failed to delete notebook')
   }
+}
+
+const goToBookshelf = () => {
+  router.push('/bookshelf')
 }
 </script>
 
@@ -185,5 +199,20 @@ const deleteNotebook = async (notebookId) => {
 }
 .el-button--success:hover, .el-button--danger:hover {
   filter: brightness(0.95);
+}
+.header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding-right: 20px;
+  margin-bottom: 18px;
+}
+.back-btn {
+  font-size: 16px;
+  border-radius: 6px;
+  padding: 0 18px;
+  height: 36px;
+  margin-right: 20px;
 }
 </style> 

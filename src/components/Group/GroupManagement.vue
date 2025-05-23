@@ -15,25 +15,22 @@
         <div class="search-section">
           <el-input
             v-model="searchText"
-            placeholder="Enter ID to search"
+            placeholder="Enter group name to search"
             class="search-input"
             clearable
-          >
-            <template #append>
-              <el-select v-model="searchType" style="width: 100px">
-                <el-option label="Group" value="group" />
-                <el-option label="User" value="user" />
-              </el-select>
-            </template>
-          </el-input>
-          <el-button type="primary" @click="handleSearch">Search</el-button>
+            :prefix-icon="User"
+          />
+          <el-button type="primary" @click="handleSearch">
+            <el-icon><Search /></el-icon>
+            Search
+          </el-button>
         </div>
 
         <!-- 我的群组列表 -->
         <div class="group-list">
           <!-- <h3>My Group</h3> -->
           <el-table :data="myGroups" style="width: 100%" v-if="myGroups.length > 0">
-            <el-table-column prop="groupName" label="Name" />
+            <el-table-column prop="groupName" label="Group Name" />
             <el-table-column prop="userRole" label="Subject">
               <template #default="scope">
                 <el-tag :type="scope.row.userRole === 'owner' ? 'success' : 'info'">
@@ -41,16 +38,8 @@
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="Operate">
+            <el-table-column label="Operation">
               <template #default="scope">
-                <el-button 
-                  v-if="scope.row.userRole === 'owner'"
-                  type="danger" 
-                  size="small" 
-                  @click="handleDeleteGroup(scope.row)"
-                >
-                  Ungroup
-                </el-button>
                 <el-button 
                   v-if="scope.row.userRole === 'owner'"
                   type="primary" 
@@ -58,6 +47,14 @@
                   @click="openInviteDialog(scope.row)"
                 >
                   Invite
+                </el-button>
+                <el-button 
+                  v-if="scope.row.userRole === 'owner'"
+                  type="danger" 
+                  size="small" 
+                  @click="handleDeleteGroup(scope.row)"
+                >
+                  Ungroup
                 </el-button>
               </template>
             </el-table-column>
@@ -69,27 +66,16 @@
 
         <!-- 搜索结果列表 -->
         <div v-if="searchResults.length > 0" class="search-results">
-          <h3>Result</h3>
-          <el-table :data="searchResults" style="width: 100%">
-            <el-table-column prop="groupName" label="Name" v-if="searchType === 'group'" />
-            <el-table-column prop="userName" label="Username" v-if="searchType === 'user'" />
-            <el-table-column label="Operation">
+          <el-table :data="searchResults" style="width: 100%" class="result-table">
+            <el-table-column prop="groupName" label="Group Name" />
+            <el-table-column label="Operation" width="640" align="center">
               <template #default="scope">
                 <el-button 
                   type="primary" 
                   size="small" 
                   @click="handleJoinRequest(scope.row)"
-                  v-if="searchType === 'group'"
                 >
                   Apply to join
-                </el-button>
-                <el-button 
-                  type="primary" 
-                  size="small" 
-                  @click="handleInvite(scope.row)"
-                  v-if="searchType === 'user' && currentGroup"
-                >
-                  Invite
                 </el-button>
               </template>
             </el-table-column>
@@ -119,7 +105,7 @@
   <!-- 邀请用户对话框 -->
   <el-dialog
     v-model="showInviteDialog"
-    title="Invite Users to Group"
+    title="Invite User"
     width="30%"
   >
     <div class="search-section">
@@ -164,6 +150,7 @@ import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import axios from 'axios'
 import NavMenu from '../common/NavMenu.vue'
+import { User, Search } from '@element-plus/icons-vue'
 
 /**最开始要先获取用户id  如果接口需要*/
 const currentUser = ref(localStorage.getItem('user')) 
@@ -206,15 +193,15 @@ const searchUsers = async () => {
   
   try {
     const response = await axios.post('/search_group_user', {
-      groupName: '',
+      groupName: '',  // 保持空字符串
       userName: inviteSearchText.value
     })
     
-    if (response.data.data && response.data.data.length > 0) {
-      inviteSearchResults.value = response.data.data
+    if (response.data.code === 1 && response.data.data) {
+      inviteSearchResults.value = [response.data.data]
     } else {
       inviteSearchResults.value = []
-      ElMessage.info('No matching users found')
+      ElMessage.info(response.data.msg || 'No matching users found')
     }
   } catch (error) {
     console.error('Failed to search users:', error)
@@ -225,174 +212,176 @@ const searchUsers = async () => {
 /**第二步  调用接口 接口拿到数据 将数据存到 searchResults*/
 /**搜索群组 */
 const handleSearch = async () => {
-    try {
-      const response = await axios.post('/search_group_user', {
-        groupName: searchType.value === 'group' ? searchText.value : '',
-        userName: searchType.value === 'user' ? searchText.value : ''
-      })
-      
-      if (response.data.code === 1) {
-        // 将单个对象转换为数组
-        const result = response.data.data
-        if (result && (result.userName || result.groupName)) {
-          searchResults.value = [result]  // 将单个结果包装成数组
-        } else {
-          searchResults.value = []
-          ElMessage.info('未找到相关结果')
-        }
+  try {
+    const response = await axios.post('/search_group_user', {
+      groupName: searchText.value,
+      userName: ''
+    })
+    
+    if (response.data.code === 1) {
+      const result = response.data.data
+      if (result && result.groupName) {
+        searchResults.value = [result]
       } else {
         searchResults.value = []
-        ElMessage.warning(response.data.msg || '搜索失败')
+        ElMessage.info(response.data.msg || 'No results found')
       }
-    } catch (error) {
-      console.error('搜索失败:', error)
-      ElMessage.error('搜索失败: ' + (error.response?.data?.msg || error.message))
+    } else {
       searchResults.value = []
+      ElMessage.warning(response.data.msg || 'Search failed')
     }
+  } catch (error) {
+    console.error('Search failed:', error)
+    ElMessage.error('Search failed: ' + (error.response?.data?.msg || error.message))
+    searchResults.value = []
   }
-  /**获取群组列表 */
-  const fetchMyGroups = async () => {
-    try {
-      const response = await axios.get(`/group_show/${userId}`)
-      if (response.data.data.length > 0) {
-        myGroups.value = response.data.data
-      }else{
-        console.log('无数据')
-        myGroups.value = []
-      }
-    } catch (error) {
-      console.error('获取群组列表失败:', error)
-      ElMessage.error('获取群组列表失败')
+}
+/**获取群组列表 */
+const fetchMyGroups = async () => {
+  try {
+    const response = await axios.get(`/group_show/${userId}`)
+    if (response.data.data.length > 0) {
+      // 按创建时间降序排序
+      myGroups.value = response.data.data.sort((a, b) => {
+        return new Date(b.createTime) - new Date(a.createTime)
+      })
+    } else {
+      console.log('无数据')
+      myGroups.value = []
     }
+  } catch (error) {
+    console.error('获取群组列表失败:', error)
+    ElMessage.error('获取群组列表失败')
   }
+}
 /**创建群组 */
-  const handleCreateGroup = async () => {
-    try {
-      // 表单验证
-      if (!createForm.value.groupName) {
-        ElMessage.warning('Please enter group name')
-        return
-      }
-      
-      const response = await axios.post('/group_create', {
-        groupId: '',
-        groupName: createForm.value.groupName,
-        userId: userId
-      })
-      
-      if (response.data.code === 1) {
-        ElMessage.success('Group created successfully')
-        showCreateDialog.value = false
-        createForm.value.groupName = ''
-        await fetchMyGroups()
-      } else {
-        ElMessage.error(response.data.msg || 'Failed to create group')
-      }
-    } catch (error) {
-      console.error('Failed to create group:', error)
-      ElMessage.error('Failed to create group')
-    }
-  }
-
-/**解散群组 */
-  const handleDeleteGroup = async (group) => {
-    try {
-      await ElMessageBox.confirm('Are you sure you want to delete this group?', 'Warning', {
-        type: 'warning'
-      })
-      
-      const response = await axios.delete('/group_delete', {
-        data: {
-          groupId: group.id,
-        userId: userId
-        }
-      })
-      
-      if (response.data.code === 1) {
-        ElMessage.success('Group deleted successfully')
-        fetchMyGroups()
-      }
-    } catch (error) {
-      if (error !== 'cancel') {
-        console.error('Failed to delete group:', error)
-        ElMessage.error('Failed to delete group')
-      }
-    }
-  }
-
-  /**加入群组 */
-  const handleJoinRequest = async (group) => {
-    try {
-      const response = await axios.post('/apply_to_group', {
-        fromUserId: userId,
-        groupId: group.id,
-        toUserId: group.userId,
-        id: '',
-        status: '',
-        type: ''
-      })
-      
-      if (response.data.code === 1) {
-        ElMessage.success('Application sent successfully')
-      }
-    } catch (error) {
-      console.error('Failed to send application:', error)
-      ElMessage.error('Failed to send application')
-    }
-  }
-  
-  /**邀请用户加入群组 */
-  const handleInvite = async (user) => {
-    if (!currentGroup.value) {
-      ElMessage.warning('Please select a group first')
+const handleCreateGroup = async () => {
+  try {
+    // 表单验证
+    if (!createForm.value.groupName) {
+      ElMessage.warning('Please enter group name')
       return
     }
     
-    try {
-      const response = await axios.post('/apply_to_group', {
-        fromUserId: userId,
-        groupId: currentGroup.value.id,
-        toUserId: user.id,
-        id: '',
-        status: '',
-        type: ''
-      })
-      
-      if (response.data.code === 1) {
-        ElMessage.success('Invitation sent successfully')
-        if (showInviteDialog.value) {
-          closeInviteDialog()
-        }
+    const response = await axios.post('/group_create', {
+      groupId: '',
+      groupName: createForm.value.groupName,
+      userId: userId
+    })
+    
+    if (response.data.code === 1) {
+      ElMessage.success('Group created successfully')
+      showCreateDialog.value = false
+      createForm.value.groupName = ''
+      await fetchMyGroups()
+    } else {
+      ElMessage.error(response.data.msg || 'Failed to create group')
+    }
+  } catch (error) {
+    console.error('Failed to create group:', error)
+    ElMessage.error('Failed to create group')
+  }
+}
+
+/**解散群组 */
+const handleDeleteGroup = async (group) => {
+  try {
+    await ElMessageBox.confirm('Are you sure you want to delete this group?', 'Warning', {
+      type: 'warning'
+    })
+    
+    const response = await axios.delete('/group_delete', {
+      data: {
+        groupId: group.id,
+      userId: userId
       }
-    } catch (error) {
-      console.error('Failed to send invitation:', error)
-      ElMessage.error('Failed to send invitation')
+    })
+    
+    if (response.data.code === 1) {
+      ElMessage.success('Group deleted successfully')
+      fetchMyGroups()
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('Failed to delete group:', error)
+      ElMessage.error('Failed to delete group')
     }
   }
-  
-  // 生命周期钩子
-  onMounted(() => {
-    fetchMyGroups()
-  })
+}
+
+/**加入群组 */
+const handleJoinRequest = async (group) => {
+  try {
+    const response = await axios.post('/apply_to_group', {
+      fromUserId: userId,
+      groupId: group.id,
+      toUserId: group.userId,
+      id: '',
+      status: '',
+      type: ''
+    })
+    
+    if (response.data.code === 1) {
+      ElMessage.success('Application sent successfully')
+    }
+  } catch (error) {
+    console.error('Failed to send application:', error)
+    ElMessage.error('Failed to send application')
+  }
+}
+
+/**邀请用户加入群组 */
+const handleInvite = async (user) => {
+  if (!currentGroup.value) {
+    ElMessage.warning('Please select a group first')
+    return
+  }
+  try {
+    const response = await axios.post('/invite_to_group', {
+      fromUserId: userId,
+      groupId: currentGroup.value.id,
+      toUserId: user.userId,
+      id: 0,
+      status: '',
+      type: '',
+      createTime: ''
+    })
+    if (response.data.code === 1) {
+      ElMessage.success('Invitation sent successfully')
+      if (showInviteDialog.value) {
+        closeInviteDialog()
+      }
+    } else {
+      ElMessage.error(response.data.msg || 'Failed to send invitation')
+    }
+  } catch (error) {
+    console.error('Failed to send invitation:', error)
+    ElMessage.error('Failed to send invitation: ' + (error.response?.data?.msg || error.message))
+  }
+}
+
+// 生命周期钩子
+onMounted(() => {
+  fetchMyGroups()
+})
 
 // 状态变量
 const searchText = ref('')
-const searchType = ref('group')
 const showCreateDialog = ref(false)
 
   
-  // 表单相关
-  const createForm = ref({
-    groupName: '',
-    userId: userId
-  })
+// 表单相关
+const createForm = ref({
+  groupName: '',
+  userId: userId
+})
   
-  const rules = {
-    groupName: [
-      { required: true, message: 'Please enter group name', trigger: 'blur' },
-      { min: 2, max: 20, message: 'Length should be 2 to 20 characters', trigger: 'blur' }
-    ]
-  }
+const rules = {
+  groupName: [
+    { required: true, message: 'Please enter group name', trigger: 'blur' },
+    { min: 2, max: 20, message: 'Length should be 2 to 20 characters', trigger: 'blur' }
+  ]
+}
   
 </script>
 
@@ -408,15 +397,15 @@ const showCreateDialog = ref(false)
   padding: 0 20px;
   background-color: white;
   border-bottom: 1px solid #eee;
-  border-top-left-radius: 8px;
-  border-top-right-radius: 8px;
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
   height: 60px;
   margin-top: 1px;
 }
 
 .main-content {
-  border-bottom-left-radius: 8px;
-  border-bottom-right-radius: 8px;
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
 }
 
 .header-actions {
@@ -443,8 +432,9 @@ h3 {
 
 .search-section {
   display: flex;
-  gap: 10px;
+  align-items: center;
   margin-bottom: 20px;
+  gap: 10px;
   background-color: white;
   padding: 20px;
   border-radius: 4px;
@@ -452,7 +442,7 @@ h3 {
 }
 
 .search-input {
-  width: 300px;
+  width: 230px;
 }
 
 .group-list, .search-results {
@@ -483,5 +473,60 @@ h3 {
 
 :deep(.el-dialog__body) {
   padding-top: 20px;
+}
+
+.search-results {
+  background-color: white;
+  padding: 20px;
+  border-radius: 4px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  margin: 20px 0;
+}
+
+.result-table {
+  width: calc(100% - 20px);
+}
+
+:deep(.el-table) {
+  margin-top: 10px;
+}
+
+:deep(.el-table th) {
+  background: #f2f6fc !important;
+  color: #222;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+:deep(.el-table td) {
+  padding: 12px 0;
+}
+
+.result-title {
+  margin: 0 0 20px 20px;
+  color: #409EFF;
+  font-weight: 500;
+}
+
+.search-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+:deep(.el-button .el-icon) {
+  margin-right: 4px;
+}
+
+:deep(.el-input__wrapper) {
+  box-shadow: 0 0 0 1px #dcdfe6 inset;
+}
+
+:deep(.el-input__wrapper:hover) {
+  box-shadow: 0 0 0 1px #c0c4cc inset;
+}
+
+:deep(.el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 1px #409EFF inset;
 }
 </style>

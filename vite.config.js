@@ -15,8 +15,7 @@ export default defineConfig({
     proxy: {
       // HTTP API 代理
       '/api': {
-        // target: 'http://localhost:8080/',
-        target: 'http://10.252.145.201:8080',
+        target: 'http://10.252.144.183:8080',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
         // 可选：添加更多请求头
@@ -40,8 +39,7 @@ export default defineConfig({
       },
       // WebSocket 代理
       '/ws': {
-        target: 'ws://10.252.145.201:8080',
-        //target: 'http://localhost:8080/',
+        target: 'ws://10.252.144.183:8080',
         ws: true,
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/ws/, ''),

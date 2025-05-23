@@ -29,7 +29,7 @@
           index="logout"
           @click="handleLogout"
         >
-          注销
+          Logout
         </el-menu-item>
       </el-sub-menu>
 
@@ -166,7 +166,7 @@ onMounted(() => {
     const userData = JSON.parse(user)
     userFlag.name = userData.username
     userFlag.menuList = [
-      {url: '/usercenter', name: '用户中心'},
+      {url: '/usercenter', name: 'User Center'},
     ]
     isLogin.value = true
     
@@ -178,8 +178,8 @@ onMounted(() => {
   } else {
     userFlag.name = '未登录'
     userFlag.menuList = [
-      { url: '/register', name: '注册' },
-      { url: '/login', name: '登录' },
+      { url: '/register', name: 'Register' },
+      { url: '/login', name: 'Login' },
     ]
     isLogin.value = false
   }

@@ -1,9 +1,6 @@
 <template>
   <div class="editor-wrapper">
     <el-form v-if="note" :model="note" label-width="100px" class="edit-form">
-      <div class="form-header">
-        <h2>Note Editor</h2>
-      </div>
       
       <div class="form-info">
         <el-form-item label="Note ID">
@@ -24,9 +21,31 @@
       </el-form-item>
       
       <el-form-item class="form-actions">
-        <el-button type="primary" size="large" @click="saveNote" icon="Check">Save</el-button>
-        <el-button size="large" @click="fetchNote" icon="Refresh">Reload</el-button>
-        <el-button type="success" size="large" @click="downloadAsWord" icon="Download">Download Word</el-button>
+        <el-tooltip content="Save" placement="top">
+          <el-button type="primary" size="small" @click="saveNote">
+            <el-icon><Check /></el-icon>
+          </el-button>
+        </el-tooltip>
+        <el-tooltip content="Reload" placement="top">
+          <el-button size="small" @click="fetchNote">
+            <el-icon><Refresh /></el-icon>
+          </el-button>
+        </el-tooltip>
+        <el-tooltip content="Download Word" placement="top">
+          <el-button type="success" size="small" @click="downloadAsWord">
+            <el-icon><Download /></el-icon>
+          </el-button>
+        </el-tooltip>
+        <el-tooltip content="Polish" placement="top">
+          <el-button type="warning" size="small" @click="polishText" :loading="polishing">
+            <el-icon><MagicStick /></el-icon>
+          </el-button>
+        </el-tooltip>
+        <el-tooltip content="Summarize" placement="top">
+          <el-button type="info" size="small" @click="summarizeText" :loading="summarizing">
+            <el-icon><Document /></el-icon>
+          </el-button>
+        </el-tooltip>
         <span v-if="lastWsMsg" class="update-notice">
           <i class="el-icon-warning"></i> {{ lastWsMsg }}
         </span>
@@ -45,7 +64,7 @@ import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import CustomQuillEditor from './CustomQuillEditor.vue'
-import { Check, Refresh, Download } from '@element-plus/icons-vue'
+import { Check, Refresh, Download, MagicStick, Document } from '@element-plus/icons-vue'
 
 const props = defineProps({
   notebookId: [String, Number]
@@ -120,10 +139,10 @@ const saveNote = async () => {
       sendNoteContentUpdate();
     } else {
       // Handle different error cases
-      if (res.data?.msg?.includes('笔记已被更新')) {
+      if (res.data?.msg?.includes('Notebook has been updated')) {
         ElMessage.error('Note has been updated by someone else. Please reload');
         lastWsMsg.value = 'Note has been updated by someone else. Please reload to get the latest content';
-      } else if (res.data?.msg?.includes('内容没有变化')) {
+      } else if (res.data?.msg?.includes('No change!')) {
         ElMessage.info('Content has not changed');
       } else {
         ElMessage.warning(res.data?.msg || 'Save failed');
@@ -194,27 +213,22 @@ const setupWebSocket = () => {
     // Close existing connection
     if (websocket) {
       websocket.close();
-    }
-    
-    // Check if we've exceeded max reconnection attempts
-    if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-      console.warn('Max WebSocket reconnection attempts reached');
-      ElMessage.warning('实时协作功能暂时不可用，请刷新页面重试');
-      return;
+      websocket = null;
     }
     
     // Get the current host and protocol
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host;
+    // Use backend server port instead of Vite dev server port
+    const host = 'localhost:8080'; // 或者你的后端服务地址
     
     // Establish WebSocket connection with full URL
-    websocket = new WebSocket(`/ws/${clientId}`);
+    websocket = new WebSocket(`${protocol}//${host}/ws/${clientId}`);
     
     // When connection is established
     websocket.onopen = () => {
       console.log('WebSocket connection established, client ID:', clientId);
-      reconnectAttempts = 0; // Reset reconnect attempts on successful connection
-      lastWsMsg.value = ''; // Clear any error messages
+      reconnectAttempts = 0;
+      lastWsMsg.value = '';
     };
     
     // Receive messages
@@ -223,11 +237,10 @@ const setupWebSocket = () => {
         const message = event.data;
         console.log('Received WebSocket message:', message);
         
-        // Handle messages sent by backend, judging by message content
+        // Handle messages sent by backend
         if (message.includes('新版本笔记保存，请更新') || 
             message === '新版本笔记保存，请更新') {
           // Check if it's our own update notification
-          // If we just saved, ignore our own notification
           if (justSaved) {
             console.log('Ignoring own update notification');
             justSaved = false;
@@ -237,21 +250,27 @@ const setupWebSocket = () => {
           // Update notification from other clients
           lastWsMsg.value = 'Note has been updated by someone else. Please reload to get the latest content';
           ElMessage.warning(lastWsMsg.value);
-        } else if (message.includes('版本冲突')) {
-          // Version conflict - only happens during save, current user already handled via HTTP response
-          console.log('Received version conflict notification, HTTP response already handled');
-        } else if (message.includes('笔记内容没有更新')) {
-          // Content not changed - only happens during save, current user already handled via HTTP response
-          console.log('Received content not changed notification, HTTP response already handled');
         }
       } catch (error) {
         console.error('Failed to process WebSocket message:', error);
       }
     };
     
+    // Connection error
+    websocket.onerror = (error) => {
+      console.error('WebSocket connection error:', error);
+      console.error('WebSocket readyState:', websocket.readyState);
+      console.error('WebSocket URL:', websocket.url);
+      // Don't increment reconnectAttempts here as onclose will handle it
+    };
+    
     // Connection closed
     websocket.onclose = (event) => {
-      console.log('WebSocket connection closed:', event.code, event.reason);
+      console.log('WebSocket connection closed:', {
+        code: event.code,
+        reason: event.reason,
+        wasClean: event.wasClean
+      });
       
       // Don't attempt to reconnect if the connection was closed normally
       if (event.code === 1000) {
@@ -266,18 +285,18 @@ const setupWebSocket = () => {
         setTimeout(setupWebSocket, RECONNECT_INTERVAL);
       } else {
         console.warn('Max reconnection attempts reached');
-        ElMessage.warning('实时协作功能暂时不可用，请刷新页面重试');
+        // Don't show error message for every failed attempt
+        if (reconnectAttempts === MAX_RECONNECT_ATTEMPTS) {
+          ElMessage.warning('Real-time collaboration feature is temporarily unavailable');
+        }
       }
-    };
-    
-    // Connection error
-    websocket.onerror = (error) => {
-      console.error('WebSocket connection error:', error);
-      // Don't increment reconnectAttempts here as onclose will handle it
     };
   } catch (error) {
     console.error('WebSocket connection failed:', error);
-    ElMessage.error('WebSocket connection failed: ' + error.message);
+    // Don't show error message for every failed attempt
+    if (reconnectAttempts === 0) {
+      ElMessage.error('Failed to establish real-time connection');
+    }
   }
 };
 
@@ -371,7 +390,10 @@ const sendNoteContentUpdate = () => {
     console.log('Note update sent via WebSocket:', noteContentTransform);
   } catch (error) {
     console.error('Failed to send WebSocket note update:', error);
-    ElMessage.error('Failed to send update: ' + error.message);
+    // Don't show error message for every failed attempt
+    if (reconnectAttempts === 0) {
+      ElMessage.error('Failed to send update');
+    }
   }
 };
 
@@ -408,6 +430,150 @@ onBeforeUnmount(() => {
     websocket = null;
   }
 });
+
+// Add new state for polishing
+const polishing = ref(false)
+const summarizing = ref(false)
+
+// Add new function for getting plain text
+const getPlainText = () => {
+  if (!quillEditor.value) return ''
+  const content = quillEditor.value.getContent() || ''
+  // 创建临时 div 来去除 HTML 标签
+  const tempDiv = document.createElement('div')
+  tempDiv.innerHTML = content
+  return tempDiv.textContent || tempDiv.innerText || ''
+}
+
+// Add new function for summarizing
+const summarizeText = async () => {
+  if (!quillEditor.value) {
+    ElMessage.warning('Editor not ready')
+    return
+  }
+
+  const text = getPlainText()
+  if (!text.trim()) {
+    ElMessage.warning('Please enter some text to summarize')
+    return
+  }
+
+  try {
+    summarizing.value = true
+    const userStr = localStorage.getItem('user')
+    if (!userStr) {
+      ElMessage.error('User not found, please login again')
+      return
+    }
+    const userData = JSON.parse(userStr)
+
+    const response = await axios.post('/summarize', {
+      text: text,
+      userId: userData.id
+    })
+
+    if (response.data.code === 1) {
+      quillEditor.value.setContent(response.data.data)
+      ElMessage.success('Text summarized successfully')
+    } else {
+      ElMessage.error(response.data.msg || 'Failed to summarize text')
+    }
+  } catch (error) {
+    console.error('Failed to summarize text:', error)
+    ElMessage.error('Failed to summarize text: ' + (error.response?.data?.msg || error.message))
+  } finally {
+    summarizing.value = false
+  }
+}
+
+const polishText = async () => {
+  if (!quillEditor.value) {
+    ElMessage.warning('Editor not ready')
+    return
+  }
+
+  const text = getPlainText()
+  if (!text.trim()) {
+    ElMessage.warning('Please enter some text to polish')
+    return
+  }
+
+  try {
+    polishing.value = true
+    const userStr = localStorage.getItem('user')
+    if (!userStr) {
+      ElMessage.error('User not found, please login again')
+      return
+    }
+    const userData = JSON.parse(userStr)
+
+    // 添加重试机制
+    let retryCount = 0
+    const maxRetries = 3
+    let lastError = null
+
+    while (retryCount < maxRetries) {
+      try {
+        console.log(`Attempting to polish text (attempt ${retryCount + 1}/${maxRetries})`)
+        const response = await axios.post('/polish', {
+          text: text,
+          userId: userData.id
+        }, {
+          timeout: 120000, // 2min超时
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache'
+          }
+        })
+
+        if (response.data.code === 1) {
+          quillEditor.value.setContent(response.data.data)
+          ElMessage.success('Text polished successfully')
+          return
+        } else {
+          throw new Error(response.data.msg || 'Failed to polish text')
+        }
+      } catch (error) {
+        lastError = error
+        console.error(`Attempt ${retryCount + 1} failed:`, error)
+        
+        if (error.code === 'ECONNABORTED') {
+          console.log('Request timeout, retrying...')
+        } else if (error.response) {
+          // 如果是服务器错误，立即抛出
+          throw error
+        }
+        
+        retryCount++
+        if (retryCount < maxRetries) {
+          // 等待一段时间后重试
+          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount))
+        }
+      }
+    }
+
+    // 所有重试都失败
+    throw lastError || new Error('Failed to polish text after multiple attempts')
+  } catch (error) {
+    console.error('Failed to polish text:', error)
+    let errorMessage = 'Failed to polish text'
+    
+    if (error.response) {
+      // 服务器响应错误
+      errorMessage = error.response.data?.msg || `Server error: ${error.response.status}`
+    } else if (error.request) {
+      // 请求发送失败
+      errorMessage = 'Network error: Could not connect to the server'
+    } else {
+      // 其他错误
+      errorMessage = error.message || 'Unknown error occurred'
+    }
+    
+    ElMessage.error(errorMessage)
+  } finally {
+    polishing.value = false
+  }
+}
 </script>
 
 <style scoped>
@@ -465,7 +631,9 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
+  justify-content: flex-end;
+  padding-right: 20px;
 }
 
 .update-notice {
@@ -521,5 +689,30 @@ onBeforeUnmount(() => {
   font-family: Arial, sans-serif;
   font-size: 16px;
   line-height: 1.6;
+  color: #333333;
+}
+
+:deep(.el-button) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+}
+
+:deep(.el-button .el-icon) {
+  font-size: 16px;
+}
+
+:deep(.el-button span) {
+  line-height: 1;
+  font-size: 12px;
+}
+
+:deep(.el-button.is-loading) {
+  opacity: 0.8;
+}
+
+:deep(.el-button.is-loading .el-icon) {
+  animation: rotating 2s linear infinite;
 }
 </style>

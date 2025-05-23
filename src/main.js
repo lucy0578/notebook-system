@@ -11,7 +11,7 @@ import axios from 'axios'
 
 // 设置 axios 默认配置
 axios.defaults.baseURL = '/api'
-axios.defaults.timeout = 15000  // 增加到15秒
+axios.defaults.timeout = 120000  // 增加到15秒
 axios.defaults.headers.common['Cache-Control'] = 'no-cache'  // 添加 no-cache 头部
 
 // 请求拦截器

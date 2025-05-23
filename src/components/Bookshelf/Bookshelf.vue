@@ -27,6 +27,13 @@
           >
             <el-icon><Folder /></el-icon>
             <span>{{ category }}</span>
+            <el-button 
+              type="danger" 
+              :icon="Delete"
+              text
+              class="delete-category-btn"
+              @click.stop="deleteCategory(category)"
+            />
           </el-menu-item>
         </el-menu>
       </el-aside>
@@ -36,8 +43,12 @@
           <h2>{{ activeCategory === 'all' ? 'All Notebooks' : activeCategory }}</h2>
           <div class="header-actions">
             <el-button type="primary" @click="showCreate = true">
-              <!-- <el-icon><Plus /></el-icon> -->
-              New Notebook
+              <el-icon class="button-icon"><Plus /></el-icon>
+              <span class="button-text">New Notebook</span>
+            </el-button>
+            <el-button @click="goRecycleBin">
+              <el-icon class="button-icon"><Delete /></el-icon>
+              <span class="button-text">Recycle Bin</span>
             </el-button>
           </div>
         </el-header>
@@ -50,7 +61,7 @@
                 :xs="24" 
                 :sm="12" 
                 :md="8" 
-                :lg="8"
+                :lg="6"
               >
                 <el-card class="notebook-card" :body-style="{ padding: '0px' }">
                   <div class="notebook-cover" @click="openNotebook(notebook)">
@@ -63,6 +74,8 @@
                       <el-tag 
                         :type="notebook.public ? 'success' : 'info'" 
                         size="small"
+                        class="privacy-tag"
+                        @click="togglePrivacy(notebook)"
                       >
                         {{ notebook.public ? 'Public' : 'Private' }}
                       </el-tag>
@@ -71,11 +84,15 @@
                       <el-button 
                         type="primary" 
                         :icon="Edit"
+                        text
+                        class="action-btn edit-btn"
                         @click="editNotebook(notebook)"
                       />
                       <el-button 
                         type="danger" 
                         :icon="Delete"
+                        text
+                        class="action-btn delete-btn"
                         @click="deleteNotebook(notebook)"
                       />
                     </div>
@@ -166,17 +183,26 @@ const newNotebook = ref({
 
 // Filter notebooks based on selected category
 const filteredNotebooks = computed(() => {
-  if (activeCategory.value === 'all') {
-    return notebooks.value
-  }
-  return notebooks.value.filter(notebook => notebook.category === activeCategory.value)
+  let filtered = activeCategory.value === 'all' 
+    ? notebooks.value 
+    : notebooks.value.filter(notebook => notebook.category === activeCategory.value)
+  
+  // Sort by update time in descending order (newest first)
+  return filtered.sort((a, b) => {
+    return new Date(b.updateTime) - new Date(a.updateTime)
+  })
 })
 
 // Format date
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A'
   const date = new Date(dateString)
-  return date.toLocaleDateString()
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  return `${year}-${month}-${day} ${hours}:${minutes}`
 }
 
 // Fetch notebooks
@@ -310,6 +336,70 @@ const deleteNotebook = async (notebook) => {
   }
 }
 
+// Add deleteCategory function in script setup section
+const deleteCategory = async (category) => {
+  try {
+    await ElMessageBox.confirm(
+      `Are you sure you want to delete the category "${category}"?`,
+      'Warning',
+      {
+        confirmButtonText: 'Delete',
+        cancelButtonText: 'Cancel',
+        type: 'warning'
+      }
+    )
+    
+    // Remove category from the list
+    categories.value = categories.value.filter(c => c !== category)
+    // If the deleted category was active, switch to 'all'
+    if (activeCategory.value === category) {
+      activeCategory.value = 'all'
+    }
+    ElMessage.success('Category deleted successfully')
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('Failed to delete category:', error)
+      ElMessage.error('Failed to delete category')
+    }
+  }
+}
+
+// Add togglePrivacy function in script setup section
+const togglePrivacy = async (notebook) => {
+  try {
+    const userStr = localStorage.getItem('user')
+    if (!userStr) {
+      ElMessage.error('未找到用户信息，请重新登录')
+      router.push('/login')
+      return
+    }
+    const userData = JSON.parse(userStr)
+    
+    // 根据当前权限状态选择对应的接口
+    const endpoint = notebook.public ? '/notebook_unpublic' : '/notebook_public'
+    
+    const response = await axios.put(endpoint, {
+      notebookId: notebook.notebookId,
+      userId: userData.id
+    })
+    
+    if (response.data.code === 1) {
+      notebook.public = !notebook.public
+      ElMessage.success(`Notebook is now ${notebook.public ? 'public' : 'private'}`)
+    } else {
+      ElMessage.error(response.data.msg || 'Failed to update notebook privacy')
+    }
+  } catch (error) {
+    console.error('Failed to update notebook privacy:', error)
+    ElMessage.error('Failed to update notebook privacy')
+  }
+}
+
+// Add goRecycleBin function
+const goRecycleBin = () => {
+  router.push('/recycle')
+}
+
 // Initialize
 onMounted(() => {
   fetchNotebooks()
@@ -391,7 +481,8 @@ h2 {
 }
 
 .notebook-grid {
-  margin-top: 20px;
+  width: 1065px;
+  margin-top: 40px;
 }
 
 .notebook-card {
@@ -451,8 +542,20 @@ h2 {
 
 .notebook-actions {
   display: flex;
-  gap: 10px;
   justify-content: flex-end;
+}
+
+.action-btn {
+  color: #909399;
+  transition: color 0.3s;
+}
+
+.edit-btn:hover {
+  color: #409EFF;
+}
+
+.delete-btn:hover {
+  color: #f56c6c;
 }
 
 :deep(.el-button) {
@@ -498,5 +601,65 @@ h2 {
 
 :deep(.el-switch) {
   margin-top: 8px;
+}
+
+.delete-category-btn {
+  position: absolute;
+  right: 20px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  padding: 0;
+  border: none;
+  background: none;
+}
+
+.delete-category-btn:hover {
+  background: none;
+  color: #f56c6c;
+}
+
+:deep(.el-menu-item:hover) .delete-category-btn {
+  opacity: 1;
+}
+
+:deep(.el-menu-item) {
+  position: relative;
+}
+
+.privacy-tag {
+  cursor: pointer;
+  transition: opacity 0.3s;
+  margin-left: 8px;
+}
+
+.privacy-tag:hover {
+  opacity: 0.8;
+}
+
+:deep(.el-tag--success) {
+  background-color: #f0f9eb;
+  border-color: #e1f3d8;
+  color: #67c23a;
+}
+
+:deep(.el-tag--info) {
+  background-color: #f4f4f5;
+  border-color: #e9e9eb;
+  color: #909399;
+}
+
+.button-icon {
+  margin-right: 8px;
+}
+
+.button-text {
+  margin-left: 4px;
+}
+
+:deep(.el-button) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
 }
 </style>
