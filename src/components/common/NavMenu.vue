@@ -34,7 +34,7 @@
       </el-sub-menu>
 
       <!-- 消息通知图标 -->
-      <li style="float: right; outline: none; cursor: pointer; margin-right: 15px;" v-if="isLogin">
+      <!-- <li style="float: right; outline: none; cursor: pointer; margin-right: 15px;" v-if="isLogin">
         <el-badge :value="unreadCount" :hidden="unreadCount === 0" class="message-badge">
           <el-icon 
             style="height: 35px; line-height: 35px;"
@@ -43,11 +43,10 @@
             <Bell />
           </el-icon>
         </el-badge>
-      </li>
+      </li> -->
 
-      <li style="float: right; outline: none; cursor: pointer">
+      <li class="fullscreen-icon">
         <el-icon 
-          style="height: 35px; line-height: 35px;"
           @click="toggleFullScreen"
         >
           <FullScreen />
@@ -245,5 +244,25 @@ onBeforeUnmount(() => {
 .create-time {
   font-size: 12px;
   color: #909399;
+}
+
+.fullscreen-icon {
+  position: fixed;
+  top: 10px;
+  right: 20px;
+  z-index: 1001;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 4px;
+  transition: background-color 0.3s;
+}
+
+.fullscreen-icon:hover {
+  background-color: #f5f7fa;
+}
+
+.fullscreen-icon .el-icon {
+  font-size: 20px;
+  color: #606266;
 }
 </style>

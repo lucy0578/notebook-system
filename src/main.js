@@ -11,12 +11,11 @@ import axios from 'axios'
 
 // 设置 axios 默认配置
 axios.defaults.baseURL = '/api'
-axios.defaults.timeout = 120000  // 增加到15秒
+axios.defaults.timeout = 120000  // 增加到2min
 axios.defaults.headers.common['Cache-Control'] = 'no-cache'  // 添加 no-cache 头部
 
 // 请求拦截器
 axios.interceptors.request.use(config => {
-  console.log(`发送请求: ${config.method.toUpperCase()} ${config.url}`, config)
   const token = store.getters.token
   if (token) {
     config.headers.token = token
@@ -30,7 +29,6 @@ axios.interceptors.request.use(config => {
 // 响应拦截器
 axios.interceptors.response.use(
   response => {
-    console.log(`收到响应: ${response.config.url}`, response.data)
     return response
   },
   error => {

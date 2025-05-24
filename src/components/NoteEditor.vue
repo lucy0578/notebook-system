@@ -38,12 +38,16 @@
         </el-tooltip>
         <el-tooltip content="Polish" placement="top">
           <el-button type="warning" size="small" @click="polishText" :loading="polishing">
-            <el-icon><MagicStick /></el-icon>
+            <template v-if="!polishing">
+              <el-icon><MagicStick /></el-icon>
+            </template>
           </el-button>
         </el-tooltip>
         <el-tooltip content="Summarize" placement="top">
           <el-button type="info" size="small" @click="summarizeText" :loading="summarizing">
-            <el-icon><Document /></el-icon>
+            <template v-if="!summarizing">
+              <el-icon><Document /></el-icon>
+            </template>
           </el-button>
         </el-tooltip>
         <span v-if="lastWsMsg" class="update-notice">
@@ -467,20 +471,67 @@ const summarizeText = async () => {
     }
     const userData = JSON.parse(userStr)
 
-    const response = await axios.post('/summarize', {
-      text: text,
-      userId: userData.id
-    })
+    let retryCount = 0
+    const maxRetries = 3
+    let lastError = null
 
-    if (response.data.code === 1) {
-      quillEditor.value.setContent(response.data.data)
-      ElMessage.success('Text summarized successfully')
-    } else {
-      ElMessage.error(response.data.msg || 'Failed to summarize text')
+    while (retryCount < maxRetries) {
+      try {
+        const response = await axios.post('/summarize', {
+          text: text,
+          userId: userData.id
+        }, {
+          timeout: 300000,
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive'
+          }
+        })
+
+        if (response.data.code === 1) {
+          if (response.data.data && response.data.data.result) {
+            quillEditor.value.setContent(response.data.data.result)
+          } else {
+            quillEditor.value.setContent(response.data.data)
+          }
+          ElMessage.success('Text summarized successfully')
+          return
+        } else {
+          throw new Error(response.data.msg || 'Failed to summarize text')
+        }
+      } catch (error) {
+        lastError = error
+        
+        if (error.code === 'ECONNABORTED') {
+          ElMessage.warning('Request timeout, retrying...')
+        } else if (error.response) {
+          throw error
+        } else if (error.request) {
+          ElMessage.warning('Network error, retrying...')
+        }
+        
+        retryCount++
+        if (retryCount < maxRetries) {
+          const waitTime = 2000 * retryCount
+          await new Promise(resolve => setTimeout(resolve, waitTime))
+        }
+      }
     }
+
+    throw lastError || new Error('Failed to summarize text after multiple attempts')
   } catch (error) {
-    console.error('Failed to summarize text:', error)
-    ElMessage.error('Failed to summarize text: ' + (error.response?.data?.msg || error.message))
+    let errorMessage = 'Failed to summarize text'
+    
+    if (error.response) {
+      errorMessage = error.response.data?.msg || `Server error: ${error.response.status}`
+    } else if (error.request) {
+      errorMessage = 'Network error: Could not connect to the server'
+    } else {
+      errorMessage = error.message || 'Unknown error occurred'
+    }
+    
+    ElMessage.error(errorMessage)
   } finally {
     summarizing.value = false
   }
@@ -507,27 +558,30 @@ const polishText = async () => {
     }
     const userData = JSON.parse(userStr)
 
-    // 添加重试机制
     let retryCount = 0
     const maxRetries = 3
     let lastError = null
 
     while (retryCount < maxRetries) {
       try {
-        console.log(`Attempting to polish text (attempt ${retryCount + 1}/${maxRetries})`)
         const response = await axios.post('/polish', {
-          text: text,
-          userId: userData.id
+          userId: userData.id,
+          text: text
         }, {
-          timeout: 120000, // 2min超时
+          timeout: 300000,
           headers: {
             'Content-Type': 'application/json',
-            'Cache-Control': 'no-cache'
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive'
           }
         })
 
         if (response.data.code === 1) {
-          quillEditor.value.setContent(response.data.data)
+          if (response.data.data && response.data.data.result) {
+            quillEditor.value.setContent(response.data.data.result)
+          } else {
+            quillEditor.value.setContent(response.data.data)
+          }
           ElMessage.success('Text polished successfully')
           return
         } else {
@@ -535,37 +589,32 @@ const polishText = async () => {
         }
       } catch (error) {
         lastError = error
-        console.error(`Attempt ${retryCount + 1} failed:`, error)
         
         if (error.code === 'ECONNABORTED') {
-          console.log('Request timeout, retrying...')
+          ElMessage.warning('Request timeout, retrying...')
         } else if (error.response) {
-          // 如果是服务器错误，立即抛出
           throw error
+        } else if (error.request) {
+          ElMessage.warning('Network error, retrying...')
         }
         
         retryCount++
         if (retryCount < maxRetries) {
-          // 等待一段时间后重试
-          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount))
+          const waitTime = 2000 * retryCount
+          await new Promise(resolve => setTimeout(resolve, waitTime))
         }
       }
     }
 
-    // 所有重试都失败
     throw lastError || new Error('Failed to polish text after multiple attempts')
   } catch (error) {
-    console.error('Failed to polish text:', error)
     let errorMessage = 'Failed to polish text'
     
     if (error.response) {
-      // 服务器响应错误
       errorMessage = error.response.data?.msg || `Server error: ${error.response.status}`
     } else if (error.request) {
-      // 请求发送失败
       errorMessage = 'Network error: Could not connect to the server'
     } else {
-      // 其他错误
       errorMessage = error.message || 'Unknown error occurred'
     }
     

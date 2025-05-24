@@ -10,7 +10,7 @@
         <el-form-item prop="username" class="form-item">
           <el-input
             v-model="loginForm.username"
-            placeholder="请输入用户名"
+            placeholder="Username"
             :prefix-icon="User"
           />
           </el-form-item>
@@ -18,7 +18,7 @@
           <el-input
             v-model="loginForm.password"
             type="password"
-            placeholder="请输入密码"
+            placeholder="Password"
             show-password
             :prefix-icon="Lock"
           />
@@ -30,7 +30,7 @@
             :loading="loading"
             @click="onSubmit"
           >
-            登录
+            Login
           </el-button>
           </el-form-item>
           <el-form-item>
@@ -39,7 +39,7 @@
             class="form-confirm"
             @click="toRegister"
           >
-            去注册
+            Register
           </el-button>
           </el-form-item>
         </el-form>

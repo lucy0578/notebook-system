@@ -7,7 +7,11 @@
       <el-header class="content-header">
         <h2>Group Management</h2>
         <div class="header-actions">
-          <el-button type="primary" @click="showCreateDialog = true">New Group</el-button>
+          <el-button type="primary" @click="showCreateDialog = true">
+            <el-icon class="button-icon"><Plus /></el-icon>
+            <span class="button-text">New Group</span>
+          </el-button>
+          <!-- <el-button type="primary" @click="showCreateDialog = true">New Group</el-button> -->
         </div>
       </el-header>
       <el-main class="main-content">
@@ -31,7 +35,7 @@
           <!-- <h3>My Group</h3> -->
           <el-table :data="myGroups" style="width: 100%" v-if="myGroups.length > 0">
             <el-table-column prop="groupName" label="Group Name" />
-            <el-table-column prop="userRole" label="Subject">
+            <el-table-column prop="userRole" label="Role">
               <template #default="scope">
                 <el-tag :type="scope.row.userRole === 'owner' ? 'success' : 'info'">
                   {{ scope.row.userRole === 'owner' ? 'Owner' : 'Member' }}
@@ -40,6 +44,13 @@
             </el-table-column>
             <el-table-column label="Operation">
               <template #default="scope">
+                <el-button 
+                  type="plain" 
+                  size="small" 
+                  @click="openMemberDialog(scope.row)"
+                >
+                  Member
+                </el-button>
                 <el-button 
                   v-if="scope.row.userRole === 'owner'"
                   type="primary" 
@@ -143,6 +154,27 @@
       <el-button @click="closeInviteDialog">Close</el-button>
     </template>
   </el-dialog>
+
+  <!-- 成员列表对话框 -->
+  <el-dialog
+    v-model="showMemberDialog"
+    title="Group Members"
+    width="40%"
+  >
+    <el-table :data="currentGroupMembers" style="width: 100%">
+      <el-table-column prop="userName" label="Username" />
+      <el-table-column prop="userRole" label="Role">
+        <template #default="scope">
+          <el-tag :type="scope.row.userRole === 'owner' ? 'success' : 'info'">
+            {{ scope.row.userRole === 'owner' ? 'Owner' : 'Member' }}
+          </el-tag>
+        </template>
+      </el-table-column>
+    </el-table>
+    <template #footer>
+      <el-button @click="showMemberDialog = false">Close</el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup>
@@ -150,7 +182,7 @@ import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import axios from 'axios'
 import NavMenu from '../common/NavMenu.vue'
-import { User, Search } from '@element-plus/icons-vue'
+import { User, Search, Plus } from '@element-plus/icons-vue'
 
 /**最开始要先获取用户id  如果接口需要*/
 const currentUser = ref(localStorage.getItem('user')) 
@@ -167,6 +199,10 @@ const currentGroup = ref(null)
 const showInviteDialog = ref(false)
 const inviteSearchText = ref('')
 const inviteSearchResults = ref([])
+
+// 添加成员列表对话框相关状态
+const showMemberDialog = ref(false)
+const currentGroupMembers = ref([])
 
 // 打开邀请对话框
 const openInviteDialog = (group) => {
@@ -360,6 +396,30 @@ const handleInvite = async (user) => {
   }
 }
 
+// 打开成员列表对话框
+const openMemberDialog = async (group) => {
+  try {
+    const response = await axios.get(`/group_show_user/${group.groupId}`)
+    
+    if (response.data.code === 1) {
+      if (Array.isArray(response.data.data) && response.data.data.length > 0) {
+        currentGroupMembers.value = response.data.data
+        showMemberDialog.value = true
+      } else {
+        ElMessage.warning('No members found in this group')
+        currentGroupMembers.value = []
+      }
+    } else {
+      ElMessage.error(response.data.msg || 'Failed to get group members')
+      currentGroupMembers.value = []
+    }
+  } catch (error) {
+    console.error('Error fetching group members:', error)
+    ElMessage.error('Failed to get group members: ' + (error.response?.data?.msg || error.message))
+    currentGroupMembers.value = []
+  }
+}
+
 // 生命周期钩子
 onMounted(() => {
   fetchMyGroups()
@@ -412,6 +472,10 @@ const rules = {
   display: flex;
   gap: 10px;
   padding-right: 20px;
+}
+
+.button-icon {
+  margin-right: 8px;
 }
 
 h2, h3 {

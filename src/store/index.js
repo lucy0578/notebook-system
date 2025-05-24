@@ -34,31 +34,28 @@ const store = createStore({
       try {
         console.log('开始登录请求:', credentials)
         const response = await axios.post('/login', credentials, {
-          // 增加超时时间
           timeout: 10000,
-          // 添加请求取消标记
           cancelToken: new axios.CancelToken((cancel) => {
-            // 存储取消函数，以便在需要时可以使用
             window.cancelLoginRequest = cancel
           })
         })
         console.log('登录响应:', response.data)
-        if (response.data) {
+        if (response.data.code === 1) {
           // 确保正确处理响应数据
           const userData = {
             ...response.data.data,
-            token: response.data.token
+            token: response.data.data.token // 从 data 中获取 token
           }
           console.log('处理后的用户数据:', userData)
           commit('login', userData)
-          // 登录成功后跳转到 home 页面
           router.push('/home')
           return true
+        } else {
+          ElMessage.error(response.data.msg || '登录失败')
+          return false
         }
-        return false
       } catch (error) {
         console.error('登录失败详情:', error)
-        // 判断是否是取消请求导致的错误
         if (axios.isCancel(error)) {
           console.log('请求被取消:', error.message)
           ElMessage.warning('登录请求被取消')
