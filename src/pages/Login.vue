@@ -1,5 +1,6 @@
 <template>
     <div class="container">
+      <div id="particles-js" class="particles-background"></div>
       <el-row class="form-body">
       <el-form
         ref="formRef"
@@ -10,7 +11,7 @@
         <el-form-item prop="username" class="form-item">
           <el-input
             v-model="loginForm.username"
-            placeholder="请输入用户名"
+            placeholder="Username"
             :prefix-icon="User"
           />
           </el-form-item>
@@ -18,7 +19,7 @@
           <el-input
             v-model="loginForm.password"
             type="password"
-            placeholder="请输入密码"
+            placeholder="Password"
             show-password
             :prefix-icon="Lock"
           />
@@ -30,7 +31,7 @@
             :loading="loading"
             @click="onSubmit"
           >
-            登录
+            Login
           </el-button>
           </el-form-item>
           <el-form-item>
@@ -39,7 +40,7 @@
             class="form-confirm"
             @click="toRegister"
           >
-            去注册
+            Register
           </el-button>
           </el-form-item>
         </el-form>
@@ -48,12 +49,11 @@
   </template>
   
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useStore } from 'vuex'
 import { ElMessage } from 'element-plus'
 import { User, Lock } from '@element-plus/icons-vue'
-import axios from 'axios'
 
 const router = useRouter()
 const route = useRoute()
@@ -69,16 +69,159 @@ const loginForm = reactive({
   password: '123'
 })
 
+// Particles configuration
+const particlesConfig = {
+  particles: {
+    number: {
+      value: 160,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#ffffff"
+    },
+    shape: {
+      type: "circle"
+    },
+    opacity: {
+      value: 1,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 1,
+        opacity_min: 0,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: false,
+        speed: 4,
+        size_min: 0.3,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: false
+    },
+    move: {
+      enable: true,
+      speed: 1,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "bubble"
+      },
+      onclick: {
+        enable: true,
+        mode: "repulse"
+      },
+      resize: true
+    },
+    modes: {
+      bubble: {
+        distance: 100,
+        size: 10,
+        duration: 2,
+        opacity: 0.7,
+        speed: 3
+      },
+      repulse: {
+        distance: 200,
+        duration: 0.4
+      }
+    }
+  },
+  retina_detect: true
+}
+
 // Form validation rules
 const rules = {
   username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 2, max: 20, message: '长度在 2 到 20 个字符', trigger: 'blur' }
+    { required: true, message: 'Please enter username', trigger: 'blur' },
+    { min: 2, max: 20, message: 'Length should be 2 to 20 characters', trigger: 'blur' }
   ],
   password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 3, max: 30, message: '长度在 3 到 30 个字符', trigger: 'blur' }
+    { required: true, message: 'Please enter password', trigger: 'blur' },
+    { min: 3, max: 30, message: 'Length should be 3 to 30 characters', trigger: 'blur' }
   ]
+}
+
+// Initialize particles
+const initParticles = async () => {
+  try {
+    // Ensure DOM element exists
+    const particlesContainer = document.getElementById('particles-js')
+    if (!particlesContainer) {
+      console.error('Particles container not found')
+      return
+    }
+    
+    // Check if particles.js is already loaded globally
+    if (window.particlesJS) {
+      console.log('Using global particlesJS')
+      window.particlesJS('particles-js', particlesConfig)
+      return
+    }
+    
+    // Try to import particles.js from node_modules
+    try {
+      // Import particles.js
+      await import('particles.js')
+      
+      // After import, check if particlesJS is available globally
+      if (window.particlesJS) {
+        console.log('particlesJS loaded successfully')
+        window.particlesJS('particles-js', particlesConfig)
+      } else {
+        console.warn('particlesJS not found after import, trying CDN')
+        loadParticlesFromCDN()
+      }
+    } catch (importError) {
+      console.warn('Failed to import particles.js:', importError)
+      loadParticlesFromCDN()
+    }
+  } catch (error) {
+    console.error('Error initializing particles:', error)
+    loadParticlesFromCDN()
+  }
+}
+
+// Fallback: load from CDN
+const loadParticlesFromCDN = () => {
+  // Check if script is already loaded
+  if (document.querySelector('script[src*="particles"]')) {
+    return
+  }
+  
+  console.log('Loading particles.js from CDN')
+  const script = document.createElement('script')
+  script.src = 'https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js'
+  script.onload = () => {
+    console.log('particles.js loaded from CDN')
+    if (window.particlesJS) {
+      window.particlesJS('particles-js', particlesConfig)
+    } else {
+      console.error('particlesJS still not available after CDN load')
+    }
+  }
+  script.onerror = () => {
+    console.error('Failed to load particles.js from CDN')
+  }
+  document.head.appendChild(script)
 }
 
 // Methods
@@ -86,15 +229,12 @@ const onSubmit = async () => {
   if (!formRef.value) return
   
   try {
-    console.log('开始登录表单验证')
     await formRef.value.validate()
     loading.value = true
-    console.log('表单验证通过，发起登录请求')
     
-    // 在登录之前确保没有正在进行的请求
+    // Cancel any previous login request before starting new one
     if (window.cancelLoginRequest) {
-      console.log('取消之前的登录请求')
-      window.cancelLoginRequest('用户发起了新的登录请求')
+      window.cancelLoginRequest('New login request initiated')
     }
     
     const success = await store.dispatch('login', {
@@ -103,61 +243,72 @@ const onSubmit = async () => {
     })
     
     if (success) {
-      console.log('登录成功，准备跳转')
-      ElMessage.success('登录成功')
+      ElMessage.success('Login successful')
       const path = route.query.redirect || '/home'
-      console.log('即将跳转到:', path)
-      // 添加延迟确保登录状态完全更新
+      // Add delay to ensure login state is fully updated
       setTimeout(() => {
         router.push(path)
       }, 100)
-    } else {
-      console.log('登录返回失败状态')
     }
   } catch (error) {
-    console.error('登录过程出错:', error)
     if (error.message) {
-      ElMessage.error(`登录错误: ${error.message}`)
+      ElMessage.error(`Login error: ${error.message}`)
     } else {
-      ElMessage.error('登录过程发生未知错误')
+      ElMessage.error('Unknown error occurred during login')
     }
   } finally {
     loading.value = false
-    console.log('登录请求处理完成')
   }
 }
 
 const toRegister = () => {
   router.replace('/register')
-      }
+}
+
+onMounted(() => {
+  // 延迟初始化，确保DOM完全渲染
+  setTimeout(() => {
+    initParticles()
+  }, 100)
+})
   </script>
   
   <style scoped>
 .container {
   height: 100vh;
   width: 100vw;
-  background-image: url("@/assets/homeMask.png");
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+  background: linear-gradient(135deg, #cce4fc 0%, #404142 100%);
   position: fixed;
   left: 0;
   top: 0;
   display: flex;
   justify-content: center;
   align-items: center;
+  overflow: hidden; /* 防止滚动条影响粒子显示 */
+}
+
+.particles-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none; /* 确保不会阻止其他元素的交互 */
 }
 
 .form-body {
   border-radius: 10px;
-  width: 20%;
+  width: 30%;
   min-width: 250px;
   padding: 25px;
-  background-color: rgba(255, 255, 255, 0.9);
+  background-color: rgba(255, 255, 255, 0.6);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
   align-items: center;
+  position: relative;
+  z-index: 2;
 }
 
 /* 确保表单和表单项居中 */

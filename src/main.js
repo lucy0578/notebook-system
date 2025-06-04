@@ -9,32 +9,30 @@ import { ElMessage } from 'element-plus'
 import store, { setupAuthGuard } from './store'
 import axios from 'axios'
 
-// 设置 axios 默认配置
+// Set axios default configuration
 axios.defaults.baseURL = '/api'
-axios.defaults.timeout = 15000  // 增加到15秒
-axios.defaults.headers.common['Cache-Control'] = 'no-cache'  // 添加 no-cache 头部
+axios.defaults.timeout = 120000  // Increase to 2min
+axios.defaults.headers.common['Cache-Control'] = 'no-cache'  // Add no-cache header
 
-// 请求拦截器
+// Request interceptor
 axios.interceptors.request.use(config => {
-  console.log(`发送请求: ${config.method.toUpperCase()} ${config.url}`, config)
   const token = store.getters.token
   if (token) {
     config.headers.token = token
   }
   return config
 }, error => {
-  console.error('请求拦截器错误:', error)
+  console.error('Request interceptor error:', error)
   return Promise.reject(error)
 })
 
-// 响应拦截器
+// Response interceptor
 axios.interceptors.response.use(
   response => {
-    console.log(`收到响应: ${response.config.url}`, response.data)
     return response
   },
   error => {
-    // 创建一个错误描述对象
+    // Create error description object
     const errorInfo = {
       url: error.config?.url,
       method: error.config?.method,
@@ -43,35 +41,32 @@ axios.interceptors.response.use(
       statusText: error.response?.statusText,
       timestamp: new Date().toISOString()
     }
-    
-    console.error('请求错误详情:', errorInfo)
+  
     
     if (axios.isCancel(error)) {
-      console.log('请求被取消:', error.message)
-      // 被取消的请求通常不需要显示错误消息
+      // Canceled requests usually don't need error messages
     } else if (error.code === 'ECONNABORTED' && error.message.includes('timeout')) {
-      ElMessage.error('请求超时，请检查网络连接或服务器状态')
+      ElMessage.error('Request timeout, please check network connection or server status')
     } else if (error.response) {
       switch (error.response.status) {
         case 401:
-          ElMessage.error('未授权，请重新登录')
-          store.commit('logout')
+          ElMessage.error('Unauthorized, please login again')
           router.push('/login')
           break
         case 403:
-          ElMessage.error('拒绝访问')
+          ElMessage.error('Access denied')
           break
         case 404:
-          ElMessage.error('请求错误，未找到该资源')
+          ElMessage.error('Request error, resource not found')
           break
         case 500:
-          ElMessage.error('服务器错误')
+          ElMessage.error('Server error')
           break
         default:
-          ElMessage.error(error.response.data?.message || '未知错误')
+          ElMessage.error(error.response.data?.message || 'Unknown error')
       }
     } else {
-      ElMessage.error('网络错误，请检查网络连接')
+      ElMessage.error('Network error, please check network connection')
     }
     return Promise.reject(error)
   }
@@ -85,7 +80,7 @@ app.use(ElementPlus, {
 app.use(router)
 app.use(store)
 
-// 设置路由守卫
+// Setup route guard
 setupAuthGuard(router)
 
 app.mount('#app')

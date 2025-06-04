@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '@/pages/Home.vue'
 import EditNote from '@/pages/EditNote.vue'
-import RecycleBin from '@/pages/RecycleBin.vue'
 import Welcome from '@/pages/Welcome.vue'
 import Login from '@/pages/Login.vue'
 import Register from '@/pages/Register.vue'
@@ -23,7 +22,7 @@ const routes = [
     meta: { requiresAuth: true }
   },
   { 
-    path: '/bookshelf',
+    path: '/bookshelf/:category?',
     name: 'Bookshelf',
     component: Bookshelf,
     meta: { requiresAuth: true }
@@ -47,12 +46,6 @@ const routes = [
     meta: { requiresAuth: true }
   },
   { 
-    path: '/recycle', 
-    name: 'RecycleBin', 
-    component: RecycleBin,
-    meta: { requiresAuth: true }
-  },
-  { 
     path: '/groups', 
     name: 'GroupManagement', 
     component: GroupManagement,
@@ -71,15 +64,8 @@ const router = createRouter({
   routes
 })
 
-// 添加全局前置守卫
+// Add global before guard
 router.beforeEach((to, from, next) => {
-  console.log('Route navigation:', { 
-    to: to.path,
-    from: from.path,
-    requiresAuth: to.meta.requiresAuth,
-    isAuthenticated: !!localStorage.getItem('token')
-  })
-  
   if (to.meta.requiresAuth && !localStorage.getItem('token')) {
     next('/login')
   } else {

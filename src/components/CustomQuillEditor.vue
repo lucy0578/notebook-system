@@ -1,13 +1,16 @@
 <template>
-  <div class="custom-quill-editor" ref="editorContainer"></div>
+  <div class="custom-quill-editor">
+    <div ref="editorContainer" class="editor-container"></div>
+  </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, defineProps, defineEmits, watch, nextTick } from 'vue';
+import { ref, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
 import Quill from 'quill';
-import QuillDelta from 'quill-delta';
 import 'quill/dist/quill.snow.css';
+import QuillDelta from 'quill-delta';
 
+// Props
 const props = defineProps({
   content: {
     type: String,
@@ -15,7 +18,7 @@ const props = defineProps({
   },
   placeholder: {
     type: String,
-    default: '请输入内容...'
+    default: 'Please enter content...'
   },
   readOnly: {
     type: Boolean,
@@ -23,23 +26,24 @@ const props = defineProps({
   }
 });
 
+// Emits
 const emit = defineEmits(['update:content', 'text-change', 'editor-ready']);
 
+// Refs
 const editorContainer = ref(null);
 const quill = ref(null);
+
+// Internal change flag to prevent event loops
 let isInternalChange = false;
 
-// 确保使用正确版本的Delta
+// Ensure using correct version of Delta
 const Delta = QuillDelta;
 
-// 初始化Quill编辑器
+// Initialize Quill editor
 const initQuill = () => {
   if (!editorContainer.value) return;
-
-  console.log('===== 初始化Quill编辑器 =====');
-  console.log('Quill版本:', Quill.version);
   
-  // 创建编辑器工具栏
+  // Create editor toolbar
   const toolbarOptions = [
     ['bold', 'italic', 'underline', 'strike'],
     ['blockquote', 'code-block'],
@@ -50,20 +54,19 @@ const initQuill = () => {
     [{ 'size': ['small', false, 'large', 'huge'] }],
     [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
     [{ 'color': [] }, { 'background': [] }],
-    [{ 'font': ['Sans Serif', 'Arial', 'Times New Roman', '宋体', '黑体', '微软雅黑'] }],
+    [{ 'font': ['Sans Serif', 'Arial', 'Times New Roman', 'SimSun', 'SimHei', 'Microsoft YaHei'] }],
     [{ 'align': [] }],
     ['link', 'image'],
     ['clean']
   ];
 
-  // 初始内容 - 先准备好初始内容，这样可以避免初始化后的内容变化事件
+  // Initial content - prepare initial content first to avoid content change events after initialization
   let initialContent = '';
   if (props.content) {
     initialContent = props.content;
-    console.log('准备初始内容:', initialContent.substring(0, 100) + (initialContent.length > 100 ? '...' : ''));
   }
 
-  // 初始化Quill实例
+  // Initialize Quill instance
   quill.value = new Quill(editorContainer.value, {
     modules: {
       toolbar: toolbarOptions
@@ -72,64 +75,56 @@ const initQuill = () => {
     placeholder: props.placeholder,
     readOnly: props.readOnly
   });
-  
-  console.log('Quill实例创建成功');
 
-  // 设置初始内容 - 使用内部标记避免触发变更事件
+  // Set initial content - use internal marker to avoid triggering change events
   if (initialContent) {
-    // 标记为内部变更，这样不会触发事件循环
+    // Mark as internal change to avoid event loops
     isInternalChange = true;
     
-    // 设置内容
+    // Set content
     quill.value.root.innerHTML = initialContent;
     
-    console.log('设置初始内容完成');
-    
-    // 重置内部变更标记
+    // Reset internal change marker
     isInternalChange = false;
   }
 
-  // 监听文本变化
+  // Listen for text changes
   quill.value.on('text-change', (delta, oldContents, source) => {
-    // 忽略程序内部引起的变更
+    // Ignore changes caused by internal programs
     if (isInternalChange) {
-      console.log('忽略内部变更');
       return;
     }
     
-    // 忽略非用户引起的变更
+    // Ignore changes not caused by user
     if (source !== 'user') {
-      console.log('忽略非用户变更, 来源:', source);
       return;
     }
     
-    // 获取新内容
+    // Get new content
     const newHtml = quill.value.root.innerHTML;
     
-    // 更新内容
+    // Update content
     emit('update:content', newHtml);
     
-    // 发送变更事件
+    // Send change event
     emit('text-change', {
       delta: delta,
       html: newHtml
     });
   });
 
-  // 等到初始化完全完成后再通知编辑器准备好
+  // Wait until initialization is completely finished before notifying editor is ready
   nextTick(() => {
-    console.log('编辑器初始化完成，准备发送editor-ready事件');
-    
-    // 通知编辑器已准备好
+    // Notify editor is ready
     emit('editor-ready', quill.value);
   });
 };
 
-// 监听内容变化
+// Listen for content changes
 watch(() => props.content, (newContent) => {
   if (isInternalChange || !quill.value) return;
   
-  // 外部内容变化，更新编辑器
+  // External content change, update editor
   if (newContent !== quill.value.root.innerHTML) {
     isInternalChange = true;
     quill.value.root.innerHTML = newContent || '';
@@ -137,63 +132,61 @@ watch(() => props.content, (newContent) => {
   }
 });
 
-// 组件挂载时初始化
+// Initialize when component mounts
 onMounted(() => {
   nextTick(() => {
     initQuill();
   });
 });
 
-// 组件卸载前清理
+// Cleanup before component unmounts
 onBeforeUnmount(() => {
   if (quill.value) {
     quill.value = null;
   }
 });
 
-// 暴露方法给父组件
+// Expose methods to parent component
 defineExpose({
-  // 获取编辑器内容
+  // Get editor content
   getContent: () => {
     try {
       if (!quill.value) return '';
       return quill.value.root.innerHTML || '';
     } catch (error) {
-      console.error('获取内容失败:', error);
+      console.error('Failed to get content:', error);
       return '';
     }
   },
   
-  // 获取纯文本内容
+  // Get plain text content
   getText: () => {
     try {
       if (!quill.value) return '';
       return quill.value.getText() || '';
     } catch (error) {
-      console.error('获取文本失败:', error);
+      console.error('Failed to get text:', error);
       return '';
     }
   },
   
-  // 设置编辑器内容
+  // Set editor content
   setContent: (content) => {
     try {
       if (!quill.value) {
-        console.error('编辑器未初始化，无法设置内容');
+        console.error('Editor not initialized, cannot set content');
         return;
       }
       
-      console.log('设置编辑器内容...');
       isInternalChange = true;
       quill.value.root.innerHTML = content;
       isInternalChange = false;
-      console.log('编辑器内容已设置');
     } catch (error) {
-      console.error('设置编辑器内容失败:', error);
+      console.error('Failed to set editor content:', error);
     }
   },
   
-  // 获取Quill实例
+  // Get Quill instance
   getQuill: () => quill.value
 });
 </script>
@@ -229,7 +222,16 @@ defineExpose({
   font-family: "Microsoft YaHei", Arial, sans-serif;
   font-size: 14px;
   line-height: 1.6;
-  padding: 12px 15px;
-  overflow-y: auto;
+  padding: 16px;
+}
+
+:deep(.ql-editor.ql-blank::before) {
+  left: 16px;
+  font-style: normal;
+  color: #999;
+}
+
+:deep(.ql-snow .ql-tooltip) {
+  z-index: 1000;
 }
 </style> 
